@@ -1,0 +1,44 @@
+# docker-compose.yml  (colocar na RAIZ do repositório do back-end, ao lado do pom.xml)
+#
+# Sobe um MySQL já configurado para bater com o application.properties:
+#   spring.datasource.url      = jdbc:mysql://localhost:3306/db_naesquina?...
+#   spring.datasource.username = root
+#   spring.datasource.password = root
+#
+# Comandos (rode na pasta onde está este arquivo):
+#   docker compose up -d        -> sobe o banco em segundo plano
+#   docker compose ps           -> mostra se está "healthy"
+#   docker compose logs -f db   -> acompanha os logs
+#   docker compose down         -> para e remove o container (os dados ficam)
+#   docker compose down -v      -> para e APAGA os dados também (banco zerado)
+
+services:
+  db:
+    image: mysql:8.4
+    container_name: naesquina-mysql
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: root        # = spring.datasource.password
+      MYSQL_DATABASE: db_naesquina     # = nome do banco na URL (o Spring também cria se faltar)
+      TZ: America/Sao_Paulo
+    ports:
+      - "3306:3306"                    # host:container -> o back acessa em localhost:3306
+    command:
+      - --character-set-server=utf8mb4
+      - --collation-server=utf8mb4_unicode_ci
+      # Evita o erro "Public Key Retrieval is not allowed": a URL do projeto usa
+      # useSSL=false, e o MySQL 8.4 usa por padrão uma autenticação que exige SSL
+      # ou essa opção. Com a autenticação clássica o back conecta sem mexer na URL.
+      - --mysql-native-password=ON
+      - --authentication-policy=mysql_native_password
+    volumes:
+      - naesquina-mysql-data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD-SHELL", "mysqladmin ping -h 127.0.0.1 -uroot -proot --silent"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+
+volumes:
+  naesquina-mysql-data:
