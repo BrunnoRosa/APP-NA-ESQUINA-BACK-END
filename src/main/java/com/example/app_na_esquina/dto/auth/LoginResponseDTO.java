@@ -1,9 +1,7 @@
 package com.example.app_na_esquina.dto.auth;
 
 import com.example.app_na_esquina.model.enums.PerfilUsuario;
-import lombok.AllArgsConstructor;
-import lombok.Getter;
-import lombok.Setter;
+
 
 public class LoginResponseDTO {
     private String token;

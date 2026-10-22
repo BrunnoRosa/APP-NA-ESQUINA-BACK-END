@@ -1,7 +1,6 @@
 package com.example.app_na_esquina.model;
 
 import jakarta.persistence.*;
-import lombok.*;
 import java.math.BigDecimal;
 
 @Entity
