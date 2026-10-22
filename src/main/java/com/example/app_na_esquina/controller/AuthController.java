@@ -76,7 +76,13 @@ public class AuthController {
             UsuarioModel usuario = new UsuarioModel();
             BeanUtils.copyProperties(requestDTO, usuario);
             UsuarioModel novoUsuario = usuarioService.salvar(usuario);
-            return ResponseEntity.status(HttpStatus.CREATED).body("Conta criada com sucesso!");
+
+            // Cria um objeto JSON contendo a mensagem e o ID gerado
+            java.util.Map<String, Object> response = new java.util.HashMap<>();
+            response.put("mensagem", "Conta criada com sucesso!");
+            response.put("id", novoUsuario.getIdUsuario());
+
+            return ResponseEntity.status(HttpStatus.CREATED).body(response);
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(e.getMessage());
         }

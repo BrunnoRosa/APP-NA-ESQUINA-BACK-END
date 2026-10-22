@@ -38,6 +38,10 @@ public class SecurityConfig {
                         // Libera qualquer rota que comece com /api/auth/ (login, register, esqueci-senha, etc.)
                         .requestMatchers("/api/auth/**").permitAll()
                         .requestMatchers(HttpMethod.POST, "/api/usuarios").permitAll()
+
+                        // --- LINHA ADICIONADA PARA PERMITIR CRIAR MERCADINHO NO CADASTRO ---
+                        .requestMatchers(HttpMethod.POST, "/api/mercadinhos").permitAll()
+
                         .requestMatchers("/swagger-ui/**", "/swagger-ui.html", "/v3/api-docs", "/v3/api-docs/**").permitAll()
                         .requestMatchers("/error").permitAll()
                         .anyRequest().authenticated()
