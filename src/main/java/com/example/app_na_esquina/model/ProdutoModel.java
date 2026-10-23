@@ -1,34 +1,28 @@
 package com.example.app_na_esquina.model;
 
-import com.example.app_na_esquina.model.enums.CategoriaProduto;
 import jakarta.persistence.*;
 
 @Entity
-@Table(name = "tb_produtos")
+@Table(name = "tb_produtos", uniqueConstraints = {
+        @UniqueConstraint(columnNames = {"id_mercadinho", "id_produto_base"})
+})
 public class ProdutoModel {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long idProduto;
 
-    @Column(nullable = false)
-    private String nome;
+    // Vínculo com o produto global pré-cadastrado
+    @ManyToOne(fetch = FetchType.EAGER)
+    @JoinColumn(name = "id_produto_base")
+    private ProdutoBaseModel produtoBase;
 
-    @Column(columnDefinition = "TEXT")
-    private String descricao;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "id_mercadinho", nullable = false)
+    private MercadinhoModel mercadinho;
 
     @Column(nullable = false)
     private Double preco;
-
-    @Enumerated(EnumType.STRING)
-    @Column(nullable = false)
-    private CategoriaProduto categoria;
-
-    private String imagemUrl;
-
-    @ManyToOne
-    @JoinColumn(name = "id_mercadinho")
-    private MercadinhoModel mercadinho;
 
     @Column(name = "em_destaque")
     private Boolean emDestaque = false;
@@ -36,90 +30,59 @@ public class ProdutoModel {
     @Column(columnDefinition = "boolean default true")
     private Boolean ativo = true;
 
-    public ProdutoModel() {
-    }
+    // Campos opcionais de sobrescrita (caso o comerciante queira usar nome/foto personalizados)
+    private String nomePersonalizado;
+    private String imagemUrlPersonalizada;
 
-    public ProdutoModel(Long idProduto, String nome, String descricao, Double preco, CategoriaProduto categoria, String imagemUrl, MercadinhoModel mercadinho, Boolean emDestaque, Boolean ativo) {
+    public ProdutoModel() {}
+
+    public ProdutoModel(Long idProduto, ProdutoBaseModel produtoBase, MercadinhoModel mercadinho, Double preco, Boolean emDestaque, Boolean ativo) {
         this.idProduto = idProduto;
-        this.nome = nome;
-        this.descricao = descricao;
-        this.preco = preco;
-        this.categoria = categoria;
-        this.imagemUrl = imagemUrl;
+        this.produtoBase = produtoBase;
         this.mercadinho = mercadinho;
+        this.preco = preco;
         this.emDestaque = emDestaque;
         this.ativo = ativo;
     }
 
-    public Long getIdProduto() {
-        return idProduto;
-    }
-
-    public void setIdProduto(Long idProduto) {
-        this.idProduto = idProduto;
-    }
-
+    // Métodos utilitários para obter dados unificados (Customizado ou do Catálogo Base)
     public String getNome() {
-        return nome;
-    }
-
-    public void setNome(String nome) {
-        this.nome = nome;
-    }
-
-    public String getDescricao() {
-        return descricao;
-    }
-
-    public void setDescricao(String descricao) {
-        this.descricao = descricao;
-    }
-
-    public Double getPreco() {
-        return preco;
-    }
-
-    public void setPreco(Double preco) {
-        this.preco = preco;
-    }
-
-    public CategoriaProduto getCategoria() {
-        return categoria;
-    }
-
-    public void setCategoria(CategoriaProduto categoria) {
-        this.categoria = categoria;
+        return (nomePersonalizado != null && !nomePersonalizado.isBlank())
+                ? nomePersonalizado
+                : (produtoBase != null ? produtoBase.getNome() : "Produto sem nome");
     }
 
     public String getImagemUrl() {
-        return imagemUrl;
+        return (imagemUrlPersonalizada != null && !imagemUrlPersonalizada.isBlank())
+                ? imagemUrlPersonalizada
+                : (produtoBase != null ? produtoBase.getImagemUrl() : null);
     }
 
-    public void setImagemUrl(String imagemUrl) {
-        this.imagemUrl = imagemUrl;
+    public CategoriaModel getCategoria() {
+        return produtoBase != null ? produtoBase.getCategoria() : null;
     }
 
-    public MercadinhoModel getMercadinho() {
-        return mercadinho;
-    }
+    public Long getIdProduto() { return idProduto; }
+    public void setIdProduto(Long idProduto) { this.idProduto = idProduto; }
 
-    public void setMercadinho(MercadinhoModel mercadinho) {
-        this.mercadinho = mercadinho;
-    }
+    public ProdutoBaseModel getProdutoBase() { return produtoBase; }
+    public void setProdutoBase(ProdutoBaseModel produtoBase) { this.produtoBase = produtoBase; }
 
-    public Boolean getEmDestaque() {
-        return emDestaque;
-    }
+    public MercadinhoModel getMercadinho() { return mercadinho; }
+    public void setMercadinho(MercadinhoModel mercadinho) { this.mercadinho = mercadinho; }
 
-    public void setEmDestaque(Boolean emDestaque) {
-        this.emDestaque = emDestaque;
-    }
+    public Double getPreco() { return preco; }
+    public void setPreco(Double preco) { this.preco = preco; }
 
-    public Boolean getAtivo() {
-        return ativo;
-    }
+    public Boolean getEmDestaque() { return emDestaque; }
+    public void setEmDestaque(Boolean emDestaque) { this.emDestaque = emDestaque; }
 
-    public void setAtivo(Boolean ativo) {
-        this.ativo = ativo;
-    }
+    public Boolean getAtivo() { return ativo; }
+    public void setAtivo(Boolean ativo) { this.ativo = ativo; }
+
+    public String getNomePersonalizado() { return nomePersonalizado; }
+    public void setNomePersonalizado(String nomePersonalizado) { this.nomePersonalizado = nomePersonalizado; }
+
+    public String getImagemUrlPersonalizada() { return imagemUrlPersonalizada; }
+    public void setImagemUrlPersonalizada(String imagemUrlPersonalizada) { this.imagemUrlPersonalizada = imagemUrlPersonalizada; }
 }

@@ -1,13 +1,10 @@
 package com.example.app_na_esquina.dto.produto;
 
-import com.example.app_na_esquina.model.enums.CategoriaProduto;
-
-
 public class ProdutoRequestDTO {
     private String nome;
     private String descricao;
     private Double preco;
-    private CategoriaProduto categoria;
+    private Long idCategoria;
     private String imagemUrl;
     private Long idMercadinho;
     private Boolean emEstoque;
@@ -15,11 +12,11 @@ public class ProdutoRequestDTO {
     public ProdutoRequestDTO() {
     }
 
-    public ProdutoRequestDTO(String nome, String descricao, Double preco, CategoriaProduto categoria, String imagemUrl, Long idMercadinho, Boolean emEstoque) {
+    public ProdutoRequestDTO(String nome, String descricao, Double preco, Long idCategoria, String imagemUrl, Long idMercadinho, Boolean emEstoque) {
         this.nome = nome;
         this.descricao = descricao;
         this.preco = preco;
-        this.categoria = categoria;
+        this.idCategoria = idCategoria;
         this.imagemUrl = imagemUrl;
         this.idMercadinho = idMercadinho;
         this.emEstoque = emEstoque;
@@ -49,12 +46,12 @@ public class ProdutoRequestDTO {
         this.preco = preco;
     }
 
-    public CategoriaProduto getCategoria() {
-        return categoria;
+    public Long getIdCategoria() {
+        return idCategoria;
     }
 
-    public void setCategoria(CategoriaProduto categoria) {
-        this.categoria = categoria;
+    public void setIdCategoria(Long idCategoria) {
+        this.idCategoria = idCategoria;
     }
 
     public String getImagemUrl() {
