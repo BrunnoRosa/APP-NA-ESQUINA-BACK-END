@@ -1,5 +1,7 @@
 package com.example.app_na_esquina.controller;
 
+import com.example.app_na_esquina.dto.categoria.CategoriaResponseDTO;
+import com.example.app_na_esquina.dto.produto.AtivarProdutoRequestDTO;
 import com.example.app_na_esquina.dto.produto.ProdutoBuscaDTO;
 import com.example.app_na_esquina.dto.produto.ProdutoRequestDTO;
 import com.example.app_na_esquina.dto.produto.ProdutoResponseDTO;
@@ -25,18 +27,24 @@ public class ProdutoController {
     @Autowired
     private MercadinhoService mercadinhoService;
 
+    // Novo Endpoint: Ativar/Vincular um produto do Catálogo Global ao Mercadinho
+    @PostMapping("/ativar-do-catalogo")
+    public ResponseEntity<ProdutoResponseDTO> ativarDoCatalogo(@RequestBody AtivarProdutoRequestDTO dto) {
+        ProdutoModel produtoAtivado = produtoService.ativarProdutoDoCatalogo(dto);
+        return ResponseEntity.status(201).body(converterParaDTO(produtoAtivado));
+    }
+
+    // Cadastro manual de produto personalizado
     @PostMapping
     public ResponseEntity<ProdutoResponseDTO> cadastrar(@RequestBody ProdutoRequestDTO dto) {
         ProdutoModel model = new ProdutoModel();
-        model.setNome(dto.getNome());
-        model.setDescricao(dto.getDescricao());
         model.setPreco(dto.getPreco());
-        model.setCategoria(dto.getCategoria());
-        model.setImagemUrl(dto.getImagemUrl());
+        model.setNomePersonalizado(dto.getNome());
+        model.setImagemUrlPersonalizada(dto.getImagemUrl());
 
         if (dto.getIdMercadinho() != null) {
             MercadinhoModel mercadinho = mercadinhoService.buscarPorId(dto.getIdMercadinho())
-                    .orElseThrow(() -> new RuntimeException("Mercadinho não encontrado"));
+                    .orElseThrow(() -> new RuntimeException("Mercadinho não encontrado com ID: " + dto.getIdMercadinho()));
             model.setMercadinho(mercadinho);
         }
 
@@ -65,7 +73,7 @@ public class ProdutoController {
         return ResponseEntity.ok(dtos);
     }
 
-    // Listagem para o COMERCIANTE (Retorna todos os produtos, ativos e inativos)
+    // Listagem para o COMERCIANTE (Retorna todos os produtos do estoque do mercadinho)
     @GetMapping("/mercadinho/{idMercadinho}")
     public ResponseEntity<List<ProdutoResponseDTO>> listarPorMercadinho(@PathVariable Long idMercadinho) {
         List<ProdutoResponseDTO> produtos = produtoService.buscarPorMercadinho(idMercadinho).stream()
@@ -74,7 +82,7 @@ public class ProdutoController {
         return ResponseEntity.ok(produtos);
     }
 
-    // Listagem para o CLIENTE (Retorna apenas produtos ATIVOS)
+    // Listagem para o CLIENTE (Retorna apenas produtos ATIVOS do mercadinho)
     @GetMapping("/mercadinho/{idMercadinho}/cliente")
     public ResponseEntity<List<ProdutoResponseDTO>> listarParaCliente(@PathVariable Long idMercadinho) {
         List<ProdutoResponseDTO> produtos = produtoService.buscarAtivosPorMercadinho(idMercadinho).stream()
@@ -85,26 +93,12 @@ public class ProdutoController {
 
     @PutMapping("/{id}")
     public ResponseEntity<ProdutoResponseDTO> atualizar(@PathVariable Long id, @RequestBody ProdutoRequestDTO dto) {
-        ProdutoModel model = produtoService.buscarPorId(id)
-                .orElseThrow(() -> new RuntimeException("Produto não encontrado com o ID: " + id));
+        ProdutoModel novosDados = new ProdutoModel();
+        novosDados.setPreco(dto.getPreco());
+        novosDados.setNomePersonalizado(dto.getNome());
+        novosDados.setImagemUrlPersonalizada(dto.getImagemUrl());
 
-        if (dto.getNome() != null && !dto.getNome().trim().isEmpty()) {
-            model.setNome(dto.getNome());
-        }
-        if (dto.getPreco() != null) {
-            model.setPreco(dto.getPreco());
-        }
-        if (dto.getDescricao() != null) {
-            model.setDescricao(dto.getDescricao());
-        }
-        if (dto.getCategoria() != null) {
-            model.setCategoria(dto.getCategoria());
-        }
-        if (dto.getImagemUrl() != null) {
-            model.setImagemUrl(dto.getImagemUrl());
-        }
-
-        ProdutoModel atualizado = produtoService.salvar(model);
+        ProdutoModel atualizado = produtoService.atualizar(id, novosDados, dto.getIdCategoria());
         return ResponseEntity.ok(converterParaDTO(atualizado));
     }
 
@@ -147,13 +141,24 @@ public class ProdutoController {
     private ProdutoResponseDTO converterParaDTO(ProdutoModel model) {
         ProdutoResponseDTO dto = new ProdutoResponseDTO();
         dto.setIdProduto(model.getIdProduto());
-        dto.setNome(model.getNome());
-        dto.setDescricao(model.getDescricao());
+        dto.setNome(model.getNome()); // Utiliza o método utilitário que escolhe nomePersonalizado ou produtoBase.getNome()
         dto.setPreco(model.getPreco());
-        dto.setCategoria(model.getCategoria());
-        dto.setImagemUrl(model.getImagemUrl());
+        dto.setImagemUrl(model.getImagemUrl()); // Utiliza a imagem do catálogo base ou personalizada
         dto.setEmDestaque(Boolean.TRUE.equals(model.getEmDestaque()));
-        dto.setAtivo(model.getAtivo() != null ? model.getAtivo() : true); // Mapeando a propriedade ativo
+        dto.setAtivo(model.getAtivo() != null ? model.getAtivo() : true);
+
+        if (model.getProdutoBase() != null) {
+            dto.setDescricao(model.getProdutoBase().getDescricao());
+        }
+
+        if (model.getCategoria() != null) {
+            CategoriaResponseDTO catDto = new CategoriaResponseDTO();
+            catDto.setIdCategoria(model.getCategoria().getIdCategoria());
+            catDto.setNome(model.getCategoria().getNome());
+            catDto.setIconeUrl(model.getCategoria().getIconeUrl());
+            dto.setCategoria(catDto);
+        }
+
         return dto;
     }
 }

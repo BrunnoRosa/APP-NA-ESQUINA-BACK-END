@@ -1,7 +1,13 @@
 package com.example.app_na_esquina.service;
 
+import com.example.app_na_esquina.dto.produto.AtivarProdutoRequestDTO;
 import com.example.app_na_esquina.dto.produto.ProdutoBuscaDTO;
+import com.example.app_na_esquina.model.CategoriaModel;
+import com.example.app_na_esquina.model.MercadinhoModel;
+import com.example.app_na_esquina.model.ProdutoBaseModel;
 import com.example.app_na_esquina.model.ProdutoModel;
+import com.example.app_na_esquina.repository.CategoriaRepository;
+import com.example.app_na_esquina.repository.ProdutoBaseRepository;
 import com.example.app_na_esquina.repository.ProdutoRepository;
 import com.example.app_na_esquina.util.GeoUtils;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -20,23 +26,61 @@ public class ProdutoService {
     @Autowired
     private ProdutoRepository produtoRepository;
 
+    @Autowired
+    private CategoriaRepository categoriaRepository;
+
+    @Autowired
+    private ProdutoBaseRepository produtoBaseRepository;
+
+    @Autowired
+    private MercadinhoService mercadinhoService;
+
     public ProdutoModel salvar(ProdutoModel produto) {
         return produtoRepository.save(produto);
     }
 
+    // Método para Ativar/Vincular Produto do Catálogo Global ao Mercadinho
     @Transactional
-    public ProdutoModel atualizar(Long id, ProdutoModel dadosNovos) {
+    public ProdutoModel ativarProdutoDoCatalogo(AtivarProdutoRequestDTO dto) {
+        MercadinhoModel mercadinho = mercadinhoService.buscarPorId(dto.getIdMercadinho())
+                .orElseThrow(() -> new RuntimeException("Mercadinho não encontrado com ID: " + dto.getIdMercadinho()));
+
+        ProdutoBaseModel produtoBase = produtoBaseRepository.findById(dto.getIdProdutoBase())
+                .orElseThrow(() -> new RuntimeException("Produto base não encontrado com ID: " + dto.getIdProdutoBase()));
+
+        Optional<ProdutoModel> produtoExistente = produtoRepository
+                .findByMercadinhoIdMercadinhoAndProdutoBaseIdProdutoBase(dto.getIdMercadinho(), dto.getIdProdutoBase());
+
+        ProdutoModel produto;
+        if (produtoExistente.isPresent()) {
+            produto = produtoExistente.get();
+            produto.setPreco(dto.getPreco());
+            produto.setAtivo(dto.getAtivo() != null ? dto.getAtivo() : true);
+        } else {
+            produto = new ProdutoModel();
+            produto.setMercadinho(mercadinho);
+            produto.setProdutoBase(produtoBase);
+            produto.setPreco(dto.getPreco());
+            produto.setAtivo(dto.getAtivo() != null ? dto.getAtivo() : true);
+            produto.setEmDestaque(false);
+        }
+
+        return produtoRepository.save(produto);
+    }
+
+    @Transactional
+    public ProdutoModel atualizar(Long id, ProdutoModel dadosNovos, Long idCategoria) {
         ProdutoModel produto = produtoRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Produto não encontrado: " + id));
 
-        if (dadosNovos.getNome() != null && !dadosNovos.getNome().trim().isEmpty()) {
-            produto.setNome(dadosNovos.getNome());
-        }
         if (dadosNovos.getPreco() != null) {
             produto.setPreco(dadosNovos.getPreco());
         }
-        if (dadosNovos.getCategoria() != null) {
-            produto.setCategoria(dadosNovos.getCategoria());
+        if (dadosNovos.getNomePersonalizado() != null) {
+            produto.setNomePersonalizado(dadosNovos.getNomePersonalizado());
+        }
+        if (dadosNovos.getImagemUrlPersonalizada() != null) {
+            produto.setImagemUrlPersonalizada(dadosNovos.getImagemUrlPersonalizada());
         }
 
         return produtoRepository.save(produto);
@@ -79,7 +123,7 @@ public class ProdutoService {
     }
 
     public List<ProdutoBuscaDTO> buscarProdutosGlobal(String nome, String categoria, Double userLat, Double userLng, String ordenarPor) {
-        List<ProdutoModel> produtos = produtoRepository.findByNomeContainingIgnoreCase(nome);
+        List<ProdutoModel> produtos = produtoRepository.findByProdutoBaseNomeContainingIgnoreCaseOrNomePersonalizadoContainingIgnoreCase(nome, nome);
 
         List<ProdutoBuscaDTO> dtos = produtos.stream()
                 .filter(p -> Boolean.TRUE.equals(p.getAtivo())) // APENAS ATIVOS NA HOME/BUSCA DO CLIENTE
@@ -87,12 +131,12 @@ public class ProdutoService {
                     if (categoria == null || categoria.trim().isEmpty() || "TODOS".equalsIgnoreCase(categoria)) {
                         return true;
                     }
-                    return p.getCategoria() != null && p.getCategoria().name().equalsIgnoreCase(categoria);
+                    return p.getCategoria() != null && p.getCategoria().getNome().equalsIgnoreCase(categoria);
                 }).map(p -> {
                     ProdutoBuscaDTO dto = new ProdutoBuscaDTO();
                     dto.setIdProduto(p.getIdProduto());
                     dto.setNome(p.getNome());
-                    dto.setCategoria(p.getCategoria() != null ? p.getCategoria().name() : null);
+                    dto.setCategoria(p.getCategoria() != null ? p.getCategoria().getNome() : null);
                     dto.setPreco(p.getPreco() != null ? BigDecimal.valueOf(p.getPreco()) : null);
                     dto.setEmDestaque(Boolean.TRUE.equals(p.getEmDestaque()));
                     dto.setImagemUrl(p.getImagemUrl());
@@ -122,7 +166,7 @@ public class ProdutoService {
     }
 
     public List<ProdutoModel> buscarPorNome(String nome) {
-        return produtoRepository.findByNomeContainingIgnoreCase(nome).stream()
+        return produtoRepository.findByProdutoBaseNomeContainingIgnoreCaseOrNomePersonalizadoContainingIgnoreCase(nome, nome).stream()
                 .filter(p -> Boolean.TRUE.equals(p.getAtivo()))
                 .collect(Collectors.toList());
     }
