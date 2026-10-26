@@ -30,34 +30,39 @@ public class SecurityConfig {
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
-                // 1. Ativa a configuração de CORS
+                // 1. Aplica a configuração do Bean corsConfigurationSource() definido abaixo
                 .cors(cors -> cors.configurationSource(corsConfigurationSource()))
                 .csrf(csrf -> csrf.disable())
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
-                        // Libera qualquer rota que comece com /api/auth/ (login, register, esqueci-senha, etc.)
+                        // Rotas públicas de autenticação e cadastro
                         .requestMatchers("/api/auth/**").permitAll()
                         .requestMatchers(HttpMethod.POST, "/api/usuarios").permitAll()
-
-                        // --- LINHA ADICIONADA PARA PERMITIR CRIAR MERCADINHO NO CADASTRO ---
                         .requestMatchers(HttpMethod.POST, "/api/mercadinhos").permitAll()
 
+                        // Documentação Swagger e rotas do sistema
                         .requestMatchers("/swagger-ui/**", "/swagger-ui.html", "/v3/api-docs", "/v3/api-docs/**").permitAll()
                         .requestMatchers("/error").permitAll()
+
+                        // Qualquer outra rota exige autenticação JWT
                         .anyRequest().authenticated()
                 )
+                // 2. Registra o filtro JWT antes do filtro padrão de usuário/senha do Spring
                 .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);
 
         return http.build();
     }
 
-    // 2. Define as regras do CORS (Permite acessos de qualquer origem/aplicativo)
+    // Configuração Centralizada de CORS para Expo (Web e Dispositivos Móveis)
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
-        configuration.setAllowedOrigins(List.of("*")); // Em produção real, trocar "*" pelos domínios permitidos
+
+        // Em desenvolvimento, permite todas as origens (*). Em produção, defina os domínios específicos.
+        configuration.setAllowedOrigins(List.of("*"));
         configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"));
-        configuration.setAllowedHeaders(List.of("Authorization", "Content-Type"));
+        configuration.setAllowedHeaders(List.of("*")); // Libera qualquer cabeçalho enviado pelo Axios/Fetch
+        configuration.setExposedHeaders(List.of("Authorization")); // Permite leitura do token de resposta no frontend
 
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         source.registerCorsConfiguration("/**", configuration);
