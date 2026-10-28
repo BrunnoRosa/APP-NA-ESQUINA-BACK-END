@@ -32,10 +32,13 @@ public class PedidoModel {
     @OneToMany(mappedBy = "pedido", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<ItemPedidoModel> itens = new ArrayList<>();
 
-public PedidoModel() {
+    @Column(name = "motivo_cancelamento")
+    private String motivoCancelamento;
+
+    public PedidoModel() {
     }
 
-    public PedidoModel(Long idPedido, UsuarioModel cliente, MercadinhoModel mercadinho, StatusPedido status, BigDecimal valorTotal, LocalDateTime dataCriacao, List<ItemPedidoModel> itens) {
+    public PedidoModel(Long idPedido, UsuarioModel cliente, MercadinhoModel mercadinho, StatusPedido status, BigDecimal valorTotal, LocalDateTime dataCriacao, List<ItemPedidoModel> itens, String motivoCancelamento) {
         this.idPedido = idPedido;
         this.cliente = cliente;
         this.mercadinho = mercadinho;
@@ -43,6 +46,7 @@ public PedidoModel() {
         this.valorTotal = valorTotal;
         this.dataCriacao = dataCriacao;
         this.itens = itens;
+        this.motivoCancelamento = motivoCancelamento;
     }
 
     public Long getIdPedido() {
@@ -99,5 +103,13 @@ public PedidoModel() {
 
     public void setItens(List<ItemPedidoModel> itens) {
         this.itens = itens;
+    }
+
+    public String getMotivoCancelamento() {
+        return motivoCancelamento;
+    }
+
+    public void setMotivoCancelamento(String motivoCancelamento) {
+        this.motivoCancelamento = motivoCancelamento;
     }
 }

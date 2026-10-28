@@ -7,6 +7,7 @@ import com.example.app_na_esquina.dto.produto.ProdutoRequestDTO;
 import com.example.app_na_esquina.dto.produto.ProdutoResponseDTO;
 import com.example.app_na_esquina.model.MercadinhoModel;
 import com.example.app_na_esquina.model.ProdutoModel;
+import com.example.app_na_esquina.repository.MercadinhoRepository;
 import com.example.app_na_esquina.service.MercadinhoService;
 import com.example.app_na_esquina.service.ProdutoService;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -27,24 +28,31 @@ public class ProdutoController {
     @Autowired
     private MercadinhoService mercadinhoService;
 
-    // Novo Endpoint: Ativar/Vincular um produto do Catálogo Global ao Mercadinho
+    @Autowired
+    private MercadinhoRepository mercadinhoRepository;
+
+    // Endpoint: Ativar/Vincular um produto do Catálogo Global ao Mercadinho
     @PostMapping("/ativar-do-catalogo")
     public ResponseEntity<ProdutoResponseDTO> ativarDoCatalogo(@RequestBody AtivarProdutoRequestDTO dto) {
-        ProdutoModel produtoAtivado = produtoService.ativarProdutoDoCatalogo(dto);
+        ProdutoModel produtoAtivado = produtoService.ativarOuAtualizarProdutoDoCatalogo(dto);
         return ResponseEntity.status(201).body(converterParaDTO(produtoAtivado));
     }
 
-    // Cadastro manual de produto personalizado
+    // Cadastro manual de produto personalizado/avulso
     @PostMapping
     public ResponseEntity<ProdutoResponseDTO> cadastrar(@RequestBody ProdutoRequestDTO dto) {
         ProdutoModel model = new ProdutoModel();
         model.setPreco(dto.getPreco());
         model.setNomePersonalizado(dto.getNome());
         model.setImagemUrlPersonalizada(dto.getImagemUrl());
+        model.setAtivo(true);
+        model.setEmDestaque(false);
 
         if (dto.getIdMercadinho() != null) {
+            // Busca pelo ID do mercadinho; se não achar, busca pelo ID do comerciante/usuário
             MercadinhoModel mercadinho = mercadinhoService.buscarPorId(dto.getIdMercadinho())
-                    .orElseThrow(() -> new RuntimeException("Mercadinho não encontrado com ID: " + dto.getIdMercadinho()));
+                    .orElseGet(() -> mercadinhoRepository.findByUsuarioIdUsuarioNative(dto.getIdMercadinho())
+                            .orElseThrow(() -> new RuntimeException("Mercadinho não encontrado para o ID enviado: " + dto.getIdMercadinho())));
             model.setMercadinho(mercadinho);
         }
 
@@ -141,9 +149,9 @@ public class ProdutoController {
     private ProdutoResponseDTO converterParaDTO(ProdutoModel model) {
         ProdutoResponseDTO dto = new ProdutoResponseDTO();
         dto.setIdProduto(model.getIdProduto());
-        dto.setNome(model.getNome()); // Utiliza o método utilitário que escolhe nomePersonalizado ou produtoBase.getNome()
+        dto.setNome(model.getNome());
         dto.setPreco(model.getPreco());
-        dto.setImagemUrl(model.getImagemUrl()); // Utiliza a imagem do catálogo base ou personalizada
+        dto.setImagemUrl(model.getImagemUrl());
         dto.setEmDestaque(Boolean.TRUE.equals(model.getEmDestaque()));
         dto.setAtivo(model.getAtivo() != null ? model.getAtivo() : true);
 

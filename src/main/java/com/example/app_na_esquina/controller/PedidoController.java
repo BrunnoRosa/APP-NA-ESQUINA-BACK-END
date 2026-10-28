@@ -23,6 +23,7 @@ public class PedidoController {
         PedidoModel novoPedido = pedidoService.criarPedido(dto);
         return ResponseEntity.ok(novoPedido);
     }
+
     @GetMapping("/cliente/{idCliente}")
     public ResponseEntity<List<PedidoModel>> listarPorCliente(@PathVariable Long idCliente) {
         return ResponseEntity.ok(pedidoService.buscarPorCliente(idCliente));
@@ -32,11 +33,13 @@ public class PedidoController {
     public ResponseEntity<List<PedidoModel>> listarPorMercadinho(@PathVariable Long idMercadinho) {
         return ResponseEntity.ok(pedidoService.buscarPorMercadinho(idMercadinho));
     }
+
     @PutMapping("/{idPedido}/status")
     public ResponseEntity<PedidoModel> atualizarStatus(
             @PathVariable Long idPedido,
-            @RequestParam StatusPedido status) {
-        PedidoModel pedidoAtualizado = pedidoService.atualizarStatus(idPedido, status);
+            @RequestParam StatusPedido status,
+            @RequestParam(required = false) String motivo) { // <--- Adicionado parâmetro opcional
+        PedidoModel pedidoAtualizado = pedidoService.atualizarStatus(idPedido, status, motivo);
         return ResponseEntity.ok(pedidoAtualizado);
     }
 }

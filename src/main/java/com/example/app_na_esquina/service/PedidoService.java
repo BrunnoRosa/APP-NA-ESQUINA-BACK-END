@@ -46,7 +46,6 @@ public class PedidoService {
             ProdutoModel produto = produtoRepository.findById(itemDto.getIdProduto())
                     .orElseThrow(() -> new RuntimeException("Produto não encontrado: " + itemDto.getIdProduto()));
 
-            // Converte o preco (Double) do ProdutoModel para BigDecimal
             BigDecimal precoUnitario = BigDecimal.valueOf(produto.getPreco());
 
             ItemPedidoModel item = new ItemPedidoModel();
@@ -65,19 +64,26 @@ public class PedidoService {
         return pedidoRepository.save(pedido);
     }
 
+    public List<PedidoModel> buscarPorCliente(Long idCliente) {
+        return pedidoRepository.findByClienteIdUsuarioOrderByDataCriacaoDesc(idCliente);
+    }
 
-        public List<PedidoModel> buscarPorCliente(Long idCliente) {
-            return pedidoRepository.findByClienteIdUsuarioOrderByDataCriacaoDesc(idCliente);
-        }
+    public List<PedidoModel> buscarPorMercadinho(Long idMercadinho) {
+        return pedidoRepository.findByMercadinhoIdMercadinhoOrderByDataCriacaoDesc(idMercadinho);
+    }
 
-        public List<PedidoModel> buscarPorMercadinho(Long idMercadinho) {
-            return pedidoRepository.findByMercadinhoIdMercadinhoOrderByDataCriacaoDesc(idMercadinho);
-        }
     @Transactional
-    public PedidoModel atualizarStatus(Long idPedido, StatusPedido novoStatus) {
+    public PedidoModel atualizarStatus(Long idPedido, StatusPedido novoStatus, String motivo) {
         PedidoModel pedido = pedidoRepository.findById(idPedido)
                 .orElseThrow(() -> new RuntimeException("Pedido não encontrado: " + idPedido));
+
         pedido.setStatus(novoStatus);
+
+        // Se o status for CANCELADO e houver motivo informado, atribui à entidade
+        if (novoStatus == StatusPedido.CANCELADO && motivo != null && !motivo.trim().isEmpty()) {
+            pedido.setMotivoCancelamento(motivo);
+        }
+
         return pedidoRepository.save(pedido);
     }
 }

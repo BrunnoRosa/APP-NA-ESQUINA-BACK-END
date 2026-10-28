@@ -7,6 +7,7 @@ import com.example.app_na_esquina.model.MercadinhoModel;
 import com.example.app_na_esquina.model.ProdutoBaseModel;
 import com.example.app_na_esquina.model.ProdutoModel;
 import com.example.app_na_esquina.repository.CategoriaRepository;
+import com.example.app_na_esquina.repository.MercadinhoRepository;
 import com.example.app_na_esquina.repository.ProdutoBaseRepository;
 import com.example.app_na_esquina.repository.ProdutoRepository;
 import com.example.app_na_esquina.util.GeoUtils;
@@ -33,6 +34,9 @@ public class ProdutoService {
     private ProdutoBaseRepository produtoBaseRepository;
 
     @Autowired
+    private MercadinhoRepository mercadinhoRepository;
+
+    @Autowired
     private MercadinhoService mercadinhoService;
 
     public ProdutoModel salvar(ProdutoModel produto) {
@@ -41,15 +45,18 @@ public class ProdutoService {
 
     // Método para Ativar/Vincular Produto do Catálogo Global ao Mercadinho
     @Transactional
-    public ProdutoModel ativarProdutoDoCatalogo(AtivarProdutoRequestDTO dto) {
-        MercadinhoModel mercadinho = mercadinhoService.buscarPorId(dto.getIdMercadinho())
-                .orElseThrow(() -> new RuntimeException("Mercadinho não encontrado com ID: " + dto.getIdMercadinho()));
+    public ProdutoModel ativarOuAtualizarProdutoDoCatalogo(AtivarProdutoRequestDTO dto) {
+        // Busca flexível: primeiro pelo id_mercadinho, se não achar tenta pelo comerciante_id (idUsuario)
+        MercadinhoModel mercadinho = mercadinhoRepository.findById(dto.getIdMercadinho())
+                .orElseGet(() -> mercadinhoRepository.findByUsuarioIdUsuarioNative(dto.getIdMercadinho())
+                        .orElseThrow(() -> new RuntimeException("Mercadinho não encontrado para o ID enviado: " + dto.getIdMercadinho())));
 
         ProdutoBaseModel produtoBase = produtoBaseRepository.findById(dto.getIdProdutoBase())
                 .orElseThrow(() -> new RuntimeException("Produto base não encontrado com ID: " + dto.getIdProdutoBase()));
 
+        // Utiliza a chave primária real do mercadinho recuperado para a consulta composta
         Optional<ProdutoModel> produtoExistente = produtoRepository
-                .findByMercadinhoIdMercadinhoAndProdutoBaseIdProdutoBase(dto.getIdMercadinho(), dto.getIdProdutoBase());
+                .findByMercadinhoIdMercadinhoAndProdutoBaseIdProdutoBase(mercadinho.getIdMercadinho(), dto.getIdProdutoBase());
 
         ProdutoModel produto;
         if (produtoExistente.isPresent()) {
