@@ -30,10 +30,11 @@ public class PedidoService {
     @Transactional
     public PedidoModel criarPedido(CriarPedidoDTO dto) {
         UsuarioModel cliente = usuarioRepository.findById(dto.getIdCliente())
-                .orElseThrow(() -> new RuntimeException("Cliente não encontrado"));
+                .orElseThrow(() -> new RuntimeException("Cliente não encontrado: " + dto.getIdCliente()));
 
+        // 1. Busca o mercadinho explicitamente informado no DTO
         MercadinhoModel mercadinho = mercadinhoRepository.findById(dto.getIdMercadinho())
-                .orElseThrow(() -> new RuntimeException("Mercadinho não encontrado"));
+                .orElseThrow(() -> new RuntimeException("Mercadinho não encontrado: " + dto.getIdMercadinho()));
 
         PedidoModel pedido = new PedidoModel();
         pedido.setCliente(cliente);
@@ -45,6 +46,12 @@ public class PedidoService {
         for (ItemPedidoDTO itemDto : dto.getItens()) {
             ProdutoModel produto = produtoRepository.findById(itemDto.getIdProduto())
                     .orElseThrow(() -> new RuntimeException("Produto não encontrado: " + itemDto.getIdProduto()));
+
+            // 2. Trava de segurança: valida se o produto realmente pertence ao mercadinho do pedido
+            if (produto.getMercadinho() != null &&
+                    !produto.getMercadinho().getIdMercadinho().equals(mercadinho.getIdMercadinho())) {
+                throw new RuntimeException("O produto '" + produto.getNome() + "' não pertence ao mercadinho informado.");
+            }
 
             BigDecimal precoUnitario = BigDecimal.valueOf(produto.getPreco());
 
@@ -79,7 +86,6 @@ public class PedidoService {
 
         pedido.setStatus(novoStatus);
 
-        // Se o status for CANCELADO e houver motivo informado, atribui à entidade
         if (novoStatus == StatusPedido.CANCELADO && motivo != null && !motivo.trim().isEmpty()) {
             pedido.setMotivoCancelamento(motivo);
         }
