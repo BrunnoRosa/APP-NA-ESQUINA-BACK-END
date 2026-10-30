@@ -2,8 +2,8 @@ package com.example.app_na_esquina.dto.auth;
 
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.Size;
 
+import java.util.Locale;
 
 public class LoginRequestDTO {
 
@@ -11,15 +11,17 @@ public class LoginRequestDTO {
     @Email(message = "Formato de e-mail inválido")
     private String email;
 
+    // No login só exigimos que a senha não esteja vazia. As regras de tamanho/complexidade
+    // valem no CADASTRO; aqui, quem decide se a senha está certa é o BCrypt.
+    // (Assim também não revelamos a regra de senha para quem está só tentando adivinhar.)
     @NotBlank(message = "A senha é obrigatória")
-    @Size(min = 6, message = "A senha deve ter no mínimo 6 caracteres")
     private String senha;
 
     public LoginRequestDTO() {
     }
 
     public LoginRequestDTO(String email, String senha) {
-        this.email = email;
+        setEmail(email);
         this.senha = senha;
     }
 
@@ -27,8 +29,9 @@ public class LoginRequestDTO {
         return email;
     }
 
+    // Normaliza: tira espaços das pontas e deixa minúsculo ("  Ana@Mail.com " -> "ana@mail.com")
     public void setEmail(String email) {
-        this.email = email;
+        this.email = (email == null) ? null : email.trim().toLowerCase(Locale.ROOT);
     }
 
     public String getSenha() {
