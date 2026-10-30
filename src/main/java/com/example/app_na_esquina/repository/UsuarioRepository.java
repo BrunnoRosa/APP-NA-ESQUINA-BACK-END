@@ -11,4 +11,7 @@ public interface UsuarioRepository extends JpaRepository<UsuarioModel, Long> {
 
     // Método para buscar o usuário no banco de dados através do email (usado no login)
     Optional<UsuarioModel> findByEmail(String email);
+
+    // Responde só "existe ou não" (mais leve que trazer o usuário inteiro). Usado no cadastro.
+    boolean existsByEmail(String email);
 }
