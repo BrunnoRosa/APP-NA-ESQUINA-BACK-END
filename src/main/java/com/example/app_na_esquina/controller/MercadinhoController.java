@@ -54,6 +54,13 @@ public class MercadinhoController {
 
         return ResponseEntity.status(201).body(converterParaDTO(salvo));
     }
+    @GetMapping("/{id}")
+    public ResponseEntity<MercadinhoResponseDTO> buscarPorId(@PathVariable Long id) {
+        MercadinhoModel mercadinho = mercadinhoService.buscarPorId(id)
+                .orElseThrow(() -> new RuntimeException("Mercadinho não encontrado"));
+
+        return ResponseEntity.ok(converterParaDTO(mercadinho));
+    }
 
     @GetMapping("/proximos")
     public ResponseEntity<List<MercadinhoResponseDTO>> listarProximos(
