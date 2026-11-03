@@ -9,6 +9,8 @@ import com.example.app_na_esquina.service.UsuarioService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import com.example.app_na_esquina.exceptions.RecursoNaoEncontradoException;
+import com.example.app_na_esquina.exceptions.RegraNegocioException;
 
 import java.util.List;
 import java.util.stream.Collectors;
@@ -35,10 +37,15 @@ public class MercadinhoController {
     }
 
     @PostMapping
-    public ResponseEntity<MercadinhoResponseDTO> cadastrar(@RequestBody MercadinhoRequestDTO dto) {
+    public ResponseEntity<MercadinhoResponseDTO> cadastrar(@RequestBody MercadinhoRequestDTO dto) {        // CNPJ: só conferimos a QUANTIDADE de dígitos (14). Não validamos dígito verificador.
+        String cnpjDigitos = dto.getCnpj() == null ? "" : dto.getCnpj().replaceAll("\\D", "");
+        if (cnpjDigitos.length() != 14) {
+            throw new RegraNegocioException("O CNPJ deve ter 14 números.");
+        }
+
         MercadinhoModel model = new MercadinhoModel();
         model.setNomeFantasia(dto.getNomeFantasia());
-        model.setCnpj(dto.getCnpj());
+        model.setCnpj(cnpjDigitos);
         model.setEndereco(dto.getEndereco());
         model.setLatitude(dto.getLatitude());
         model.setLongitude(dto.getLongitude());
@@ -47,17 +54,18 @@ public class MercadinhoController {
 
         // Vincula o dono ao mercadinho
         UsuarioModel dono = usuarioService.buscarPorId(dto.getIdComerciante())
-                .orElseThrow(() -> new RuntimeException("Comerciante não encontrado"));
+                .orElseThrow(() -> new RecursoNaoEncontradoException("Comerciante não encontrado."));
         model.setComerciante(dono);
 
         MercadinhoModel salvo = mercadinhoService.salvar(model);
 
         return ResponseEntity.status(201).body(converterParaDTO(salvo));
     }
+
     @GetMapping("/{id}")
     public ResponseEntity<MercadinhoResponseDTO> buscarPorId(@PathVariable Long id) {
         MercadinhoModel mercadinho = mercadinhoService.buscarPorId(id)
-                .orElseThrow(() -> new RuntimeException("Mercadinho não encontrado"));
+                .orElseThrow(() -> new RecursoNaoEncontradoException("Mercadinho não encontrado."));
 
         return ResponseEntity.ok(converterParaDTO(mercadinho));
     }
