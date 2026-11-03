@@ -8,6 +8,7 @@ import com.example.app_na_esquina.repository.*;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import com.example.app_na_esquina.dto.pedido.PedidoResponseDTO;
 
 import java.math.BigDecimal;
 import java.util.List;
@@ -28,7 +29,7 @@ public class PedidoService {
     private ProdutoRepository produtoRepository;
 
     @Transactional
-    public PedidoModel criarPedido(CriarPedidoDTO dto) {
+    public PedidoResponseDTO criarPedido(CriarPedidoDTO dto) {
         UsuarioModel cliente = usuarioRepository.findById(dto.getIdCliente())
                 .orElseThrow(() -> new RuntimeException("Cliente não encontrado: " + dto.getIdCliente()));
 
@@ -68,19 +69,25 @@ public class PedidoService {
         }
 
         pedido.setValorTotal(total);
-        return pedidoRepository.save(pedido);
+        return PedidoResponseDTO.de(pedidoRepository.save(pedido));
     }
 
-    public List<PedidoModel> buscarPorCliente(Long idCliente) {
-        return pedidoRepository.findByClienteIdUsuarioOrderByDataCriacaoDesc(idCliente);
+    @Transactional(readOnly = true)
+    public List<PedidoResponseDTO> buscarPorCliente(Long idCliente) {
+        return pedidoRepository.findByClienteIdUsuarioOrderByDataCriacaoDesc(idCliente).stream()
+                .map(PedidoResponseDTO::de)
+                .toList();
     }
 
-    public List<PedidoModel> buscarPorMercadinho(Long idMercadinho) {
-        return pedidoRepository.findByMercadinhoIdMercadinhoOrderByDataCriacaoDesc(idMercadinho);
+    @Transactional(readOnly = true)
+    public List<PedidoResponseDTO> buscarPorMercadinho(Long idMercadinho) {
+        return pedidoRepository.findByMercadinhoIdMercadinhoOrderByDataCriacaoDesc(idMercadinho).stream()
+                .map(PedidoResponseDTO::de)
+                .toList();
     }
 
     @Transactional
-    public PedidoModel atualizarStatus(Long idPedido, StatusPedido novoStatus, String motivo) {
+    public PedidoResponseDTO atualizarStatus(Long idPedido, StatusPedido novoStatus, String motivo) {   // ✏️
         PedidoModel pedido = pedidoRepository.findById(idPedido)
                 .orElseThrow(() -> new RuntimeException("Pedido não encontrado: " + idPedido));
 
@@ -90,6 +97,6 @@ public class PedidoService {
             pedido.setMotivoCancelamento(motivo);
         }
 
-        return pedidoRepository.save(pedido);
+        return PedidoResponseDTO.de(pedidoRepository.save(pedido));   // ✏️
     }
 }
