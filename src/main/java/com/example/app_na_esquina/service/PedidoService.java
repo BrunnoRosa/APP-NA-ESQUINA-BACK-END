@@ -8,6 +8,9 @@ import com.example.app_na_esquina.repository.*;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import com.example.app_na_esquina.dto.pedido.PedidoResponseDTO;
+import com.example.app_na_esquina.exceptions.RecursoNaoEncontradoException;
+import com.example.app_na_esquina.exceptions.RegraNegocioException;
 
 import java.math.BigDecimal;
 import java.util.List;
@@ -28,13 +31,20 @@ public class PedidoService {
     private ProdutoRepository produtoRepository;
 
     @Transactional
-    public PedidoModel criarPedido(CriarPedidoDTO dto) {
+    public PedidoResponseDTO criarPedido(CriarPedidoDTO dto) {   // ✏️ era PedidoModel
+        if (dto.getIdCliente() == null || dto.getIdMercadinho() == null) {
+            throw new RegraNegocioException("Cliente e mercadinho são obrigatórios.");
+        }
+        if (dto.getItens() == null || dto.getItens().isEmpty()) {
+            throw new RegraNegocioException("O pedido precisa ter pelo menos um item.");
+        }
+
         UsuarioModel cliente = usuarioRepository.findById(dto.getIdCliente())
-                .orElseThrow(() -> new RuntimeException("Cliente não encontrado: " + dto.getIdCliente()));
+                .orElseThrow(() -> new RecursoNaoEncontradoException("Cliente não encontrado."));
 
         // 1. Busca o mercadinho explicitamente informado no DTO
         MercadinhoModel mercadinho = mercadinhoRepository.findById(dto.getIdMercadinho())
-                .orElseThrow(() -> new RuntimeException("Mercadinho não encontrado: " + dto.getIdMercadinho()));
+                .orElseThrow(() -> new RecursoNaoEncontradoException("Mercadinho não encontrado."));
 
         PedidoModel pedido = new PedidoModel();
         pedido.setCliente(cliente);
@@ -44,13 +54,20 @@ public class PedidoService {
         BigDecimal total = BigDecimal.ZERO;
 
         for (ItemPedidoDTO itemDto : dto.getItens()) {
+            if (itemDto.getIdProduto() == null) {
+                throw new RegraNegocioException("Há um item sem produto no pedido.");
+            }
+            if (itemDto.getQuantidade() == null || itemDto.getQuantidade() < 1 || itemDto.getQuantidade() > 99) {
+                throw new RegraNegocioException("A quantidade de cada item deve ser de 1 a 99.");
+            }
+
             ProdutoModel produto = produtoRepository.findById(itemDto.getIdProduto())
-                    .orElseThrow(() -> new RuntimeException("Produto não encontrado: " + itemDto.getIdProduto()));
+                    .orElseThrow(() -> new RecursoNaoEncontradoException("Um dos produtos do pedido não existe mais."));
 
             // 2. Trava de segurança: valida se o produto realmente pertence ao mercadinho do pedido
             if (produto.getMercadinho() != null &&
                     !produto.getMercadinho().getIdMercadinho().equals(mercadinho.getIdMercadinho())) {
-                throw new RuntimeException("O produto '" + produto.getNome() + "' não pertence ao mercadinho informado.");
+                throw new RegraNegocioException("O produto '" + produto.getNome() + "' não pertence ao mercadinho informado.");
             }
 
             BigDecimal precoUnitario = BigDecimal.valueOf(produto.getPreco());
@@ -68,21 +85,27 @@ public class PedidoService {
         }
 
         pedido.setValorTotal(total);
-        return pedidoRepository.save(pedido);
+        return PedidoResponseDTO.de(pedidoRepository.save(pedido));
     }
 
-    public List<PedidoModel> buscarPorCliente(Long idCliente) {
-        return pedidoRepository.findByClienteIdUsuarioOrderByDataCriacaoDesc(idCliente);
+    @Transactional(readOnly = true)
+    public List<PedidoResponseDTO> buscarPorCliente(Long idCliente) {
+        return pedidoRepository.findByClienteIdUsuarioOrderByDataCriacaoDesc(idCliente).stream()
+                .map(PedidoResponseDTO::de)
+                .toList();
     }
 
-    public List<PedidoModel> buscarPorMercadinho(Long idMercadinho) {
-        return pedidoRepository.findByMercadinhoIdMercadinhoOrderByDataCriacaoDesc(idMercadinho);
+    @Transactional(readOnly = true)
+    public List<PedidoResponseDTO> buscarPorMercadinho(Long idMercadinho) {
+        return pedidoRepository.findByMercadinhoIdMercadinhoOrderByDataCriacaoDesc(idMercadinho).stream()
+                .map(PedidoResponseDTO::de)
+                .toList();
     }
 
     @Transactional
-    public PedidoModel atualizarStatus(Long idPedido, StatusPedido novoStatus, String motivo) {
+    public PedidoResponseDTO atualizarStatus(Long idPedido, StatusPedido novoStatus, String motivo) {   // ✏️
         PedidoModel pedido = pedidoRepository.findById(idPedido)
-                .orElseThrow(() -> new RuntimeException("Pedido não encontrado: " + idPedido));
+                .orElseThrow(() -> new RecursoNaoEncontradoException("Pedido não encontrado."));
 
         pedido.setStatus(novoStatus);
 
@@ -90,6 +113,6 @@ public class PedidoService {
             pedido.setMotivoCancelamento(motivo);
         }
 
-        return pedidoRepository.save(pedido);
+        return PedidoResponseDTO.de(pedidoRepository.save(pedido));   // ✏️
     }
 }

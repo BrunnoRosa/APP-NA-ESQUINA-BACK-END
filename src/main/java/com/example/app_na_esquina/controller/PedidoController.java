@@ -1,12 +1,13 @@
 package com.example.app_na_esquina.controller;
 
 import com.example.app_na_esquina.dto.pedido.CriarPedidoDTO;
-import com.example.app_na_esquina.model.PedidoModel;
 import com.example.app_na_esquina.model.enums.StatusPedido;
 import com.example.app_na_esquina.service.PedidoService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import com.example.app_na_esquina.dto.pedido.PedidoResponseDTO;   // 🆕
+
 
 import java.util.List;
 
@@ -19,27 +20,25 @@ public class PedidoController {
     private PedidoService pedidoService;
 
     @PostMapping
-    public ResponseEntity<PedidoModel> criarPedido(@RequestBody CriarPedidoDTO dto) {
-        PedidoModel novoPedido = pedidoService.criarPedido(dto);
-        return ResponseEntity.ok(novoPedido);
+    public ResponseEntity<PedidoResponseDTO> criarPedido(@RequestBody CriarPedidoDTO dto) {
+        return ResponseEntity.ok(pedidoService.criarPedido(dto));
     }
 
     @GetMapping("/cliente/{idCliente}")
-    public ResponseEntity<List<PedidoModel>> listarPorCliente(@PathVariable Long idCliente) {
+    public ResponseEntity<List<PedidoResponseDTO>> listarPorCliente(@PathVariable Long idCliente) {
         return ResponseEntity.ok(pedidoService.buscarPorCliente(idCliente));
     }
 
     @GetMapping("/mercadinho/{idMercadinho}")
-    public ResponseEntity<List<PedidoModel>> listarPorMercadinho(@PathVariable Long idMercadinho) {
+    public ResponseEntity<List<PedidoResponseDTO>> listarPorMercadinho(@PathVariable Long idMercadinho) {
         return ResponseEntity.ok(pedidoService.buscarPorMercadinho(idMercadinho));
     }
 
     @PutMapping("/{idPedido}/status")
-    public ResponseEntity<PedidoModel> atualizarStatus(
+    public ResponseEntity<PedidoResponseDTO> atualizarStatus(
             @PathVariable Long idPedido,
             @RequestParam StatusPedido status,
-            @RequestParam(required = false) String motivo) { // <--- Adicionado parâmetro opcional
-        PedidoModel pedidoAtualizado = pedidoService.atualizarStatus(idPedido, status, motivo);
-        return ResponseEntity.ok(pedidoAtualizado);
+            @RequestParam(required = false) String motivo) {
+        return ResponseEntity.ok(pedidoService.atualizarStatus(idPedido, status, motivo));
     }
 }
