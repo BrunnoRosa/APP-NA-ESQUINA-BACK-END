@@ -16,6 +16,10 @@ public interface MercadinhoRepository extends JpaRepository<MercadinhoModel, Lon
     @Query(value = "SELECT * FROM tb_mercadinhos WHERE comerciante_id = :idUsuario LIMIT 1", nativeQuery = true)
     Optional<MercadinhoModel> findByUsuarioIdUsuarioNative(@Param("idUsuario") Long idUsuario);
 
+    // SOLUÇÃO: Nova query nativa que liga o Mercadinho ao Usuário e filtra pelo email de forma segura
+    @Query(value = "SELECT m.* FROM tb_mercadinhos m INNER JOIN tb_usuarios u ON m.comerciante_id = u.id_usuario WHERE u.email = :email LIMIT 1", nativeQuery = true)
+    Optional<MercadinhoModel> buscarPorEmailDoUsuario(@Param("email") String email);
+
     // Consulta de proximidade geográfica
     @Query(value = "SELECT *, " +
             "( 6371 * acos( cos( radians(:lat) ) * cos( radians( latitude ) ) * " +

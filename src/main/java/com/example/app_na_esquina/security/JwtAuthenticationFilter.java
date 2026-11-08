@@ -1,5 +1,8 @@
 package com.example.app_na_esquina.security;
 
+import io.jsonwebtoken.ExpiredJwtException;
+import io.jsonwebtoken.MalformedJwtException;
+import io.jsonwebtoken.security.SignatureException;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -28,8 +31,8 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             throws ServletException, IOException {
 
         final String authHeader = request.getHeader("Authorization");
-        final String jwt;
-        final String userEmail;
+        String jwt = null;
+        String userEmail = null;
 
         // Se não tiver o cabeçalho Authorization ou não começar com "Bearer ", passa para o próximo filtro
         if (authHeader == null || !authHeader.startsWith("Bearer ")) {
@@ -37,9 +40,15 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             return;
         }
 
-        // Extrai o token (remove os primeiros 7 caracteres: "Bearer ")
         jwt = authHeader.substring(7);
-        userEmail = jwtService.extrairUsername(jwt);
+
+        try {
+            // Tenta extrair o email do token
+            userEmail = jwtService.extrairUsername(jwt);
+        } catch (ExpiredJwtException | MalformedJwtException | SignatureException e) {
+            // Se o token for inválido, expirado ou tiver a assinatura errada, apenas loga (opcional) e não autentica
+            System.out.println("Aviso: Token JWT inválido ou expirado. " + e.getMessage());
+        }
 
         // Se o email existir e o utilizador ainda não estiver autenticado neste contexto
         if (userEmail != null && SecurityContextHolder.getContext().getAuthentication() == null) {
@@ -58,6 +67,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                 SecurityContextHolder.getContext().setAuthentication(authToken);
             }
         }
+
         filterChain.doFilter(request, response);
     }
 }

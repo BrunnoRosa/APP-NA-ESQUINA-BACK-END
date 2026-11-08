@@ -45,16 +45,17 @@ public class ProdutoService {
 
     // Método para Ativar/Vincular Produto do Catálogo Global ao Mercadinho
     @Transactional
-    public ProdutoModel ativarOuAtualizarProdutoDoCatalogo(AtivarProdutoRequestDTO dto) {
-        // Busca flexível: primeiro pelo id_mercadinho, se não achar tenta pelo comerciante_id (idUsuario)
-        MercadinhoModel mercadinho = mercadinhoRepository.findById(dto.getIdMercadinho())
-                .orElseGet(() -> mercadinhoRepository.findByUsuarioIdUsuarioNative(dto.getIdMercadinho())
-                        .orElseThrow(() -> new RuntimeException("Mercadinho não encontrado para o ID enviado: " + dto.getIdMercadinho())));
+    public ProdutoModel ativarOuAtualizarProdutoDoCatalogo(AtivarProdutoRequestDTO dto, String emailComercianteLogado) {
 
+        // 1. Busca o mercadinho de forma 100% segura usando o email extraído do Token JWT
+        MercadinhoModel mercadinho = mercadinhoRepository.buscarPorEmailDoUsuario(emailComercianteLogado)
+                .orElseThrow(() -> new RuntimeException("Mercadinho não encontrado para o comerciante autenticado."));
+
+        // 2. Busca o Produto Base
         ProdutoBaseModel produtoBase = produtoBaseRepository.findById(dto.getIdProdutoBase())
                 .orElseThrow(() -> new RuntimeException("Produto base não encontrado com ID: " + dto.getIdProdutoBase()));
 
-        // Utiliza a chave primária real do mercadinho recuperado para a consulta composta
+        // 3. A lógica continua igual, mas agora usando o ID seguro do mercadinho
         Optional<ProdutoModel> produtoExistente = produtoRepository
                 .findByMercadinhoIdMercadinhoAndProdutoBaseIdProdutoBase(mercadinho.getIdMercadinho(), dto.getIdProdutoBase());
 

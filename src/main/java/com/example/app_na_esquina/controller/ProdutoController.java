@@ -11,7 +11,11 @@ import com.example.app_na_esquina.repository.MercadinhoRepository;
 import com.example.app_na_esquina.service.MercadinhoService;
 import com.example.app_na_esquina.service.ProdutoService;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -31,13 +35,24 @@ public class ProdutoController {
     @Autowired
     private MercadinhoRepository mercadinhoRepository;
 
+    @PreAuthorize("hasAuthority('COMERCIANTE')")
     // Endpoint: Ativar/Vincular um produto do Catálogo Global ao Mercadinho
     @PostMapping("/ativar-do-catalogo")
-    public ResponseEntity<ProdutoResponseDTO> ativarDoCatalogo(@RequestBody AtivarProdutoRequestDTO dto) {
-        ProdutoModel produtoAtivado = produtoService.ativarOuAtualizarProdutoDoCatalogo(dto);
-        return ResponseEntity.status(201).body(converterParaDTO(produtoAtivado));
+    public ResponseEntity<ProdutoModel> ativarDoCatalogo(
+            @RequestBody AtivarProdutoRequestDTO dto,
+            @AuthenticationPrincipal UserDetails userDetails) {
+
+        // Extrai o email que o Spring validou a partir do Token
+        String emailDoComerciante = userDetails.getUsername();
+
+        // Passa o email para o serviço trabalhar
+        ProdutoModel produtoSalvo = produtoService.ativarOuAtualizarProdutoDoCatalogo(dto, emailDoComerciante);
+
+        return ResponseEntity.status(HttpStatus.CREATED).body(produtoSalvo);
     }
 
+    // Apenas utilizadores com o perfil COMERCIANTE podem aceder a este método
+    @PreAuthorize("hasAuthority('COMERCIANTE')")
     // Cadastro manual de produto personalizado/avulso
     @PostMapping
     public ResponseEntity<ProdutoResponseDTO> cadastrar(@RequestBody ProdutoRequestDTO dto) {
@@ -60,6 +75,7 @@ public class ProdutoController {
         return ResponseEntity.status(201).body(converterParaDTO(salvo));
     }
 
+    @PreAuthorize("hasAuthority('COMERCIANTE')")
     @GetMapping
     public ResponseEntity<List<ProdutoResponseDTO>> listarTodos() {
         List<ProdutoResponseDTO> produtos = produtoService.listarTodos().stream()
@@ -68,6 +84,7 @@ public class ProdutoController {
         return ResponseEntity.ok(produtos);
     }
 
+    @PreAuthorize("hasAuthority('COMERCIANTE')")
     // Endpoint de Busca Global de Produtos (Comparador de Preços e Distâncias)
     @GetMapping("/buscar")
     public ResponseEntity<List<ProdutoBuscaDTO>> buscarProdutosGlobal(
@@ -81,6 +98,7 @@ public class ProdutoController {
         return ResponseEntity.ok(dtos);
     }
 
+    @PreAuthorize("hasAuthority('COMERCIANTE')")
     // Listagem para o COMERCIANTE (Retorna todos os produtos do estoque do mercadinho)
     @GetMapping("/mercadinho/{idMercadinho}")
     public ResponseEntity<List<ProdutoResponseDTO>> listarPorMercadinho(@PathVariable Long idMercadinho) {
@@ -90,6 +108,7 @@ public class ProdutoController {
         return ResponseEntity.ok(produtos);
     }
 
+    @PreAuthorize("hasAuthority('COMERCIANTE')")
     // Listagem para o CLIENTE (Retorna apenas produtos ATIVOS do mercadinho)
     @GetMapping("/mercadinho/{idMercadinho}/cliente")
     public ResponseEntity<List<ProdutoResponseDTO>> listarParaCliente(@PathVariable Long idMercadinho) {
@@ -99,6 +118,7 @@ public class ProdutoController {
         return ResponseEntity.ok(produtos);
     }
 
+    @PreAuthorize("hasAuthority('COMERCIANTE')")
     @PutMapping("/{id}")
     public ResponseEntity<ProdutoResponseDTO> atualizar(@PathVariable Long id, @RequestBody ProdutoRequestDTO dto) {
         ProdutoModel novosDados = new ProdutoModel();
@@ -110,6 +130,7 @@ public class ProdutoController {
         return ResponseEntity.ok(converterParaDTO(atualizado));
     }
 
+    @PreAuthorize("hasAuthority('COMERCIANTE')")
     @PutMapping("/{id}/destaque")
     public ResponseEntity<ProdutoResponseDTO> alternarDestaque(
             @PathVariable("id") Long id,
@@ -124,6 +145,7 @@ public class ProdutoController {
         return ResponseEntity.ok(converterParaDTO(atualizado));
     }
 
+    @PreAuthorize("hasAuthority('COMERCIANTE')")
     // Endpoint para Alternar Status (Ativar / Inativar)
     @PutMapping("/{id}/status")
     public ResponseEntity<ProdutoResponseDTO> alternarStatus(
@@ -133,6 +155,7 @@ public class ProdutoController {
         return ResponseEntity.ok(converterParaDTO(atualizado));
     }
 
+    @PreAuthorize("hasAuthority('COMERCIANTE')")
     // Mantido por compatibilidade
     @PutMapping("/{id}/inativar")
     public ResponseEntity<Void> inativar(@PathVariable Long id) {
@@ -140,6 +163,7 @@ public class ProdutoController {
         return ResponseEntity.noContent().build();
     }
 
+    @PreAuthorize("hasAuthority('COMERCIANTE')")
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> deletar(@PathVariable Long id) {
         produtoService.deletar(id);
