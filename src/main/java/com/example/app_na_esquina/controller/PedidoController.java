@@ -5,6 +5,7 @@ import com.example.app_na_esquina.model.enums.StatusPedido;
 import com.example.app_na_esquina.service.PedidoService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 import com.example.app_na_esquina.dto.pedido.PedidoResponseDTO;   // 🆕
 
