@@ -40,14 +40,18 @@ public class SecurityConfig {
                         .requestMatchers("/api/auth/**").permitAll()
                         .requestMatchers(HttpMethod.POST, "/api/usuarios").permitAll()
 
-                        // Libera TODOS os métodos HTTP (GET, POST, etc.) para mercadinhos
+                        // Libera consulta pública de produtos (GET) para a Home do Cliente / Busca
+                        .requestMatchers(HttpMethod.GET, "/api/produtos", "/api/produtos/**").permitAll()
+
+                        // Libera TODOS os métodos HTTP para mercadinhos e categorias
                         .requestMatchers("/api/mercadinhos", "/api/mercadinhos/**").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/categorias", "/api/categorias/**").permitAll()
 
                         // Documentação Swagger e rotas de erro do Spring
                         .requestMatchers("/swagger-ui/**", "/swagger-ui.html", "/v3/api-docs", "/v3/api-docs/**").permitAll()
                         .requestMatchers("/error", "/error/**").permitAll()
 
-                        // Qual outra rota exige autenticação JWT
+                        // Qual qualquer outra rota exige autenticação JWT (ex: POST/PUT de produtos por comerciante)
                         .anyRequest().authenticated()
                 )
                 .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);

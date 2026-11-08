@@ -75,7 +75,6 @@ public class ProdutoController {
         return ResponseEntity.status(201).body(converterParaDTO(salvo));
     }
 
-    @PreAuthorize("hasAuthority('COMERCIANTE')")
     @GetMapping
     public ResponseEntity<List<ProdutoResponseDTO>> listarTodos() {
         List<ProdutoResponseDTO> produtos = produtoService.listarTodos().stream()
@@ -84,7 +83,7 @@ public class ProdutoController {
         return ResponseEntity.ok(produtos);
     }
 
-    @PreAuthorize("hasAuthority('COMERCIANTE')")
+
     // Endpoint de Busca Global de Produtos (Comparador de Preços e Distâncias)
     @GetMapping("/buscar")
     public ResponseEntity<List<ProdutoBuscaDTO>> buscarProdutosGlobal(
@@ -98,7 +97,7 @@ public class ProdutoController {
         return ResponseEntity.ok(dtos);
     }
 
-    @PreAuthorize("hasAuthority('COMERCIANTE')")
+
     // Listagem para o COMERCIANTE (Retorna todos os produtos do estoque do mercadinho)
     @GetMapping("/mercadinho/{idMercadinho}")
     public ResponseEntity<List<ProdutoResponseDTO>> listarPorMercadinho(@PathVariable Long idMercadinho) {
@@ -108,7 +107,7 @@ public class ProdutoController {
         return ResponseEntity.ok(produtos);
     }
 
-    @PreAuthorize("hasAuthority('COMERCIANTE')")
+
     // Listagem para o CLIENTE (Retorna apenas produtos ATIVOS do mercadinho)
     @GetMapping("/mercadinho/{idMercadinho}/cliente")
     public ResponseEntity<List<ProdutoResponseDTO>> listarParaCliente(@PathVariable Long idMercadinho) {
