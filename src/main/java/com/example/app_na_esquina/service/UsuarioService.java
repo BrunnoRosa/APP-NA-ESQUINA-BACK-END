@@ -22,15 +22,16 @@ public class UsuarioService {
     @Autowired
     private PasswordEncoder passwordEncoder;
 
-    // Cadastro público (tela de Cadastro). Aqui ficam as regras que o formato do DTO não cobre.
     @Transactional
     public UsuarioModel cadastrar(UsuarioRequestDTO dto) {
-        // Ninguém pode se auto-cadastrar como ADMIN pela API pública.
         if (dto.getPerfil() == PerfilUsuario.ADMIN) {
             throw new RegraNegocioException("Não é permitido criar uma conta com o perfil informado.");
         }
 
-        // O e-mail já chega minúsculo e sem espaços (normalizado no DTO).
+        if (dto.getConfirmarSenha() == null || !dto.getSenha().equals(dto.getConfirmarSenha())) {
+            throw new RegraNegocioException("As senhas informadas não coincidem.");
+        }
+
         if (usuarioRepository.existsByEmail(dto.getEmail())) {
             throw new ConflitoException("Já existe uma conta cadastrada com este e-mail.");
         }
@@ -46,7 +47,6 @@ public class UsuarioService {
     }
 
     public UsuarioModel salvar(UsuarioModel usuario) {
-        // Encripta a senha com BCrypt antes de enviar para o banco
         usuario.setSenha(passwordEncoder.encode(usuario.getSenha()));
         return usuarioRepository.save(usuario);
     }
