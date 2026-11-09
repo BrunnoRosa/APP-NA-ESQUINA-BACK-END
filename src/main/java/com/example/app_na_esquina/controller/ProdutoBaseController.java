@@ -10,7 +10,6 @@ import java.util.List;
 
 @RestController
 @RequestMapping("/api/catalogo-global")
-@CrossOrigin(origins = "*")
 public class ProdutoBaseController {
 
     @Autowired
