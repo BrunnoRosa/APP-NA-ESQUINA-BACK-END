@@ -43,11 +43,17 @@ public class MercadinhoController {
             throw new RegraNegocioException("O CNPJ deve ter 14 números.");
         }
 
+        // CEP: aceita "40015-000" ou "40015000", mas guarda só os 8 números
+        String cepDigitos = dto.getCep() == null ? "" : dto.getCep().replaceAll("\\D", "");
+        if (cepDigitos.length() != 8) {
+            throw new RegraNegocioException("O CEP deve ter 8 números.");
+        }
+
         MercadinhoModel model = new MercadinhoModel();
         model.setNomeFantasia(dto.getNomeFantasia());
         model.setCnpj(cnpjDigitos);
         model.setEndereco(dto.getEndereco());
-        model.setCep(dto.getCep());
+        model.setCep(cepDigitos);
         model.setLatitude(dto.getLatitude());
         model.setLongitude(dto.getLongitude());
         model.setHorarioAbertura(dto.getHorarioAbertura());
@@ -70,7 +76,13 @@ public class MercadinhoController {
 
         if (dto.getNomeFantasia() != null) mercadinho.setNomeFantasia(dto.getNomeFantasia());
         if (dto.getEndereco() != null) mercadinho.setEndereco(dto.getEndereco());
-        if (dto.getCep() != null) mercadinho.setCep(dto.getCep());
+        if (dto.getCep() != null && !dto.getCep().trim().isEmpty()) {
+            String cepDigitos = dto.getCep().replaceAll("\\D", "");
+            if (cepDigitos.length() != 8) {
+                throw new RegraNegocioException("O CEP deve ter 8 números.");
+            }
+            mercadinho.setCep(cepDigitos);
+        }
         if (dto.getLatitude() != null) mercadinho.setLatitude(dto.getLatitude());
         if (dto.getLongitude() != null) mercadinho.setLongitude(dto.getLongitude());
         if (dto.getHorarioAbertura() != null) mercadinho.setHorarioAbertura(dto.getHorarioAbertura());
