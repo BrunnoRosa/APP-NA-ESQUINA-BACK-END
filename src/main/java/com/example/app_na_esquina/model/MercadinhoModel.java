@@ -19,6 +19,8 @@ public class MercadinhoModel {
     @Column(nullable = false)
     private String endereco;
 
+    private String cep;
+
     @Column(name = "latitude")
     private Double latitude;
 
@@ -35,11 +37,12 @@ public class MercadinhoModel {
     public MercadinhoModel() {
     }
 
-    public MercadinhoModel(Long idMercadinho, String nomeFantasia, String cnpj, String endereco, Double latitude, Double longitude, LocalTime horarioAbertura, LocalTime horarioFechamento, UsuarioModel comerciante) {
+    public MercadinhoModel(Long idMercadinho, String nomeFantasia, String cnpj, String endereco, String cep, Double latitude, Double longitude, LocalTime horarioAbertura, LocalTime horarioFechamento, UsuarioModel comerciante) {
         this.idMercadinho = idMercadinho;
         this.nomeFantasia = nomeFantasia;
         this.cnpj = cnpj;
         this.endereco = endereco;
+        this.cep = cep;
         this.latitude = latitude;
         this.longitude = longitude;
         this.horarioAbertura = horarioAbertura;
@@ -77,6 +80,14 @@ public class MercadinhoModel {
 
     public void setEndereco(String endereco) {
         this.endereco = endereco;
+    }
+
+    public String getCep() {
+        return cep;
+    }
+
+    public void setCep(String cep) {
+        this.cep = cep;
     }
 
     public Double getLatitude() {

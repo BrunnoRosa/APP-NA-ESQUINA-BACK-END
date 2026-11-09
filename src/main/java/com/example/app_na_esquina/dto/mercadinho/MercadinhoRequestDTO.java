@@ -2,11 +2,12 @@ package com.example.app_na_esquina.dto.mercadinho;
 
 import java.time.LocalTime;
 
-
 public class MercadinhoRequestDTO {
     private String nomeFantasia;
     private String cnpj;
     private String endereco;
+    private String cep;
+    private String telefone;
     private Double latitude;
     private Double longitude;
     private LocalTime horarioAbertura;
@@ -16,10 +17,12 @@ public class MercadinhoRequestDTO {
     public MercadinhoRequestDTO() {
     }
 
-    public MercadinhoRequestDTO(String nomeFantasia, String cnpj, String endereco, Double latitude, Double longitude, LocalTime horarioAbertura, LocalTime horarioFechamento, Long idComerciante) {
+    public MercadinhoRequestDTO(String nomeFantasia, String cnpj, String endereco, String cep, String telefone, Double latitude, Double longitude, LocalTime horarioAbertura, LocalTime horarioFechamento, Long idComerciante) {
         this.nomeFantasia = nomeFantasia;
         this.cnpj = cnpj;
         this.endereco = endereco;
+        this.cep = cep;
+        this.telefone = telefone;
         this.latitude = latitude;
         this.longitude = longitude;
         this.horarioAbertura = horarioAbertura;
@@ -49,6 +52,22 @@ public class MercadinhoRequestDTO {
 
     public void setEndereco(String endereco) {
         this.endereco = endereco;
+    }
+
+    public String getCep() {
+        return cep;
+    }
+
+    public void setCep(String cep) {
+        this.cep = cep;
+    }
+
+    public String getTelefone() {
+        return telefone;
+    }
+
+    public void setTelefone(String telefone) {
+        this.telefone = telefone;
     }
 
     public Double getLatitude() {
