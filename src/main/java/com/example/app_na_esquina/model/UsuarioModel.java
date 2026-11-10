@@ -1,8 +1,8 @@
 package com.example.app_na_esquina.model;
 
 import com.example.app_na_esquina.model.enums.PerfilUsuario;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import jakarta.persistence.*;
-
 
 @Entity
 @Table(name = "tb_usuarios")
@@ -19,6 +19,7 @@ public class UsuarioModel {
     private String email;
 
     @Column(nullable = false)
+    @JsonProperty(access = JsonProperty.Access.WRITE_ONLY) // Isso impede que o hash da senha seja devolvido no JSON quando a API responder ao endpoint GET /api/usuarios/me.
     private String senha;
 
     private String telefone;
@@ -27,16 +28,28 @@ public class UsuarioModel {
     @Column(nullable = false)
     private PerfilUsuario perfil;
 
+    @Column(name = "push_token")
+    private String pushToken;
+
+    public String getPushToken() {
+        return pushToken;
+    }
+
+    public void setPushToken(String pushToken) {
+        this.pushToken = pushToken;
+    }
+
     public UsuarioModel() {
     }
 
-    public UsuarioModel(Long idUsuario, String nome, String email, String senha, String telefone, PerfilUsuario perfil) {
+    public UsuarioModel(Long idUsuario, String nome, String email, String senha, String telefone, PerfilUsuario perfil, String pushToken) {
         this.idUsuario = idUsuario;
         this.nome = nome;
         this.email = email;
         this.senha = senha;
         this.telefone = telefone;
         this.perfil = perfil;
+        this.pushToken = pushToken;
     }
 
     public Long getIdUsuario() {
@@ -87,4 +100,3 @@ public class UsuarioModel {
         this.perfil = perfil;
     }
 }
-

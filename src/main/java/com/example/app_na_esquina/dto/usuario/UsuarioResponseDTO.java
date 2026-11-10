@@ -2,23 +2,24 @@ package com.example.app_na_esquina.dto.usuario;
 
 import com.example.app_na_esquina.model.enums.PerfilUsuario;
 
-
 public class UsuarioResponseDTO {
     private Long idUsuario;
     private String nome;
     private String email;
     private String telefone;
     private PerfilUsuario perfil;
+    private Long idMercadinho;
 
     public UsuarioResponseDTO() {
     }
 
-    public UsuarioResponseDTO(Long idUsuario, String nome, String email, String telefone, PerfilUsuario perfil) {
+    public UsuarioResponseDTO(Long idUsuario, String nome, String email, String telefone, PerfilUsuario perfil, Long idMercadinho) {
         this.idUsuario = idUsuario;
         this.nome = nome;
         this.email = email;
         this.telefone = telefone;
         this.perfil = perfil;
+        this.idMercadinho = idMercadinho;
     }
 
     public Long getIdUsuario() {
@@ -59,5 +60,13 @@ public class UsuarioResponseDTO {
 
     public void setPerfil(PerfilUsuario perfil) {
         this.perfil = perfil;
+    }
+
+    public Long getIdMercadinho() {
+        return idMercadinho;
+    }
+
+    public void setIdMercadinho(Long idMercadinho) {
+        this.idMercadinho = idMercadinho;
     }
 }

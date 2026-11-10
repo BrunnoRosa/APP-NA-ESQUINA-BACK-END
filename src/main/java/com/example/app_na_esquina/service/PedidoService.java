@@ -2,18 +2,23 @@ package com.example.app_na_esquina.service;
 
 import com.example.app_na_esquina.dto.pedido.CriarPedidoDTO;
 import com.example.app_na_esquina.dto.pedido.ItemPedidoDTO;
+import com.example.app_na_esquina.dto.pedido.PedidoResponseDTO;
+import com.example.app_na_esquina.exceptions.RecursoNaoEncontradoException;
+import com.example.app_na_esquina.exceptions.RegraNegocioException;
 import com.example.app_na_esquina.model.*;
 import com.example.app_na_esquina.model.enums.StatusPedido;
 import com.example.app_na_esquina.repository.*;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpEntity;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import com.example.app_na_esquina.dto.pedido.PedidoResponseDTO;
-import com.example.app_na_esquina.exceptions.RecursoNaoEncontradoException;
-import com.example.app_na_esquina.exceptions.RegraNegocioException;
+import org.springframework.web.client.RestTemplate;
 
 import java.math.BigDecimal;
 import java.util.List;
+import java.util.Map;
 
 @Service
 public class PedidoService {
@@ -31,7 +36,7 @@ public class PedidoService {
     private ProdutoRepository produtoRepository;
 
     @Transactional
-    public PedidoResponseDTO criarPedido(CriarPedidoDTO dto) {   // ✏️ era PedidoModel
+    public PedidoResponseDTO criarPedido(CriarPedidoDTO dto) {
         if (dto.getIdCliente() == null || dto.getIdMercadinho() == null) {
             throw new RegraNegocioException("Cliente e mercadinho são obrigatórios.");
         }
@@ -42,7 +47,6 @@ public class PedidoService {
         UsuarioModel cliente = usuarioRepository.findById(dto.getIdCliente())
                 .orElseThrow(() -> new RecursoNaoEncontradoException("Cliente não encontrado."));
 
-        // 1. Busca o mercadinho explicitamente informado no DTO
         MercadinhoModel mercadinho = mercadinhoRepository.findById(dto.getIdMercadinho())
                 .orElseThrow(() -> new RecursoNaoEncontradoException("Mercadinho não encontrado."));
 
@@ -64,7 +68,6 @@ public class PedidoService {
             ProdutoModel produto = produtoRepository.findById(itemDto.getIdProduto())
                     .orElseThrow(() -> new RecursoNaoEncontradoException("Um dos produtos do pedido não existe mais."));
 
-            // 2. Trava de segurança: valida se o produto realmente pertence ao mercadinho do pedido
             if (produto.getMercadinho() != null &&
                     !produto.getMercadinho().getIdMercadinho().equals(mercadinho.getIdMercadinho())) {
                 throw new RegraNegocioException("O produto '" + produto.getNome() + "' não pertence ao mercadinho informado.");
@@ -103,7 +106,7 @@ public class PedidoService {
     }
 
     @Transactional
-    public PedidoResponseDTO atualizarStatus(Long idPedido, StatusPedido novoStatus, String motivo) {   // ✏️
+    public PedidoResponseDTO atualizarStatus(Long idPedido, StatusPedido novoStatus, String motivo) {
         PedidoModel pedido = pedidoRepository.findById(idPedido)
                 .orElseThrow(() -> new RecursoNaoEncontradoException("Pedido não encontrado."));
 
@@ -113,6 +116,61 @@ public class PedidoService {
             pedido.setMotivoCancelamento(motivo);
         }
 
-        return PedidoResponseDTO.de(pedidoRepository.save(pedido));   // ✏️
+        PedidoModel salvo = pedidoRepository.save(pedido);
+
+        notificarMudancaStatus(salvo, novoStatus);
+
+        return PedidoResponseDTO.de(salvo);
+    }
+
+    private void notificarMudancaStatus(PedidoModel pedido, StatusPedido novoStatus) {
+        try {
+            UsuarioModel cliente = pedido.getCliente();
+            if (cliente != null && cliente.getPushToken() != null && !cliente.getPushToken().trim().isEmpty()) {
+                String nomeMercadinho = (pedido.getMercadinho() != null && pedido.getMercadinho().getNomeFantasia() != null)
+                        ? pedido.getMercadinho().getNomeFantasia()
+                        : "Mercadinho";
+
+                String titulo = "Atualização do seu pedido #" + pedido.getIdPedido();
+                String mensagem = "Seu pedido em " + nomeMercadinho + " mudou para: " + formatarStatus(novoStatus);
+
+                enviarExpoPushNotification(cliente.getPushToken(), titulo, mensagem, pedido.getIdPedido());
+            }
+        } catch (Exception e) {
+            System.err.println("Erro ao processar notificação push: " + e.getMessage());
+        }
+    }
+
+    private void enviarExpoPushNotification(String pushToken, String titulo, String mensagem, Long idPedido) {
+        try {
+            RestTemplate restTemplate = new RestTemplate();
+            HttpHeaders headers = new HttpHeaders();
+            headers.setContentType(MediaType.APPLICATION_JSON);
+
+            Map<String, Object> body = Map.of(
+                    "to", pushToken,
+                    "title", titulo,
+                    "body", mensagem,
+                    "sound", "default",
+                    "data", Map.of("idPedido", idPedido, "tipo", "STATUS_PEDIDO")
+            );
+
+            var entity = new HttpEntity<>(body, headers);
+            restTemplate.postForEntity("https://exp.host/--/api/v2/push/send", entity, String.class);
+        } catch (Exception e) {
+            System.err.println("Erro ao comunicar com a API do Expo Push: " + e.getMessage());
+        }
+    }
+
+    private String formatarStatus(StatusPedido status) {
+        if (status == null) return "";
+        return switch (status) {
+            case PENDENTE -> "Pedido Pendente";
+            case EM_SEPARACAO -> "Produto em separação";
+            case AGUARDANDO_RETIRADA -> "Produto aguardando retirada";
+            case RETIRADA_CONCLUIDO -> "Produto Entregue";
+            case CANCELADO -> "Pedido Cancelado";
+            default -> status.name();
+        };
     }
 }
