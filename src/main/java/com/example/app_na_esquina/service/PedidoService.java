@@ -9,6 +9,7 @@ import com.example.app_na_esquina.model.*;
 import com.example.app_na_esquina.model.enums.StatusPedido;
 import com.example.app_na_esquina.repository.*;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
@@ -34,6 +35,12 @@ public class PedidoService {
 
     @Autowired
     private ProdutoRepository produtoRepository;
+
+    @Value("${vapid.public.key:}")
+    private String vapidPublicKey;
+
+    @Value("${vapid.private.key:}")
+    private String vapidPrivateKey;
 
     @Transactional
     public PedidoResponseDTO criarPedido(CriarPedidoDTO dto) {
@@ -134,10 +141,52 @@ public class PedidoService {
                 String titulo = "Atualização do seu pedido #" + pedido.getIdPedido();
                 String mensagem = "Seu pedido em " + nomeMercadinho + " mudou para: " + formatarStatus(novoStatus);
 
-                enviarExpoPushNotification(cliente.getPushToken(), titulo, mensagem, pedido.getIdPedido());
+                String token = cliente.getPushToken().trim();
+
+                // Se começar com '{', é uma subscrição Web Push (JSON); caso contrário, é Expo Mobile Token
+                if (token.startsWith("{")) {
+                    enviarWebPushNotification(token, titulo, mensagem);
+                } else {
+                    enviarExpoPushNotification(token, titulo, mensagem, pedido.getIdPedido());
+                }
             }
         } catch (Exception e) {
             System.err.println("Erro ao processar notificação push: " + e.getMessage());
+        }
+    }
+
+    private void enviarWebPushNotification(String subscriptionJson, String titulo, String mensagem) {
+        try {
+            if (java.security.Security.getProvider(org.bouncycastle.jce.provider.BouncyCastleProvider.PROVIDER_NAME) == null) {
+                java.security.Security.addProvider(new org.bouncycastle.jce.provider.BouncyCastleProvider());
+            }
+
+            com.fasterxml.jackson.databind.ObjectMapper mapper = new com.fasterxml.jackson.databind.ObjectMapper();
+            com.fasterxml.jackson.databind.JsonNode root = mapper.readTree(subscriptionJson);
+
+            String endpoint = root.path("endpoint").asText();
+            String p256dh = root.path("keys").path("p256dh").asText();
+            String auth = root.path("keys").path("auth").asText();
+
+            nl.martijndwars.webpush.Subscription subscription = new nl.martijndwars.webpush.Subscription(
+                    endpoint,
+                    new nl.martijndwars.webpush.Subscription.Keys(p256dh, auth)
+            );
+
+            String payload = mapper.writeValueAsString(Map.of(
+                    "title", titulo,
+                    "body", mensagem
+            ));
+
+            nl.martijndwars.webpush.PushService pushService = new nl.martijndwars.webpush.PushService(
+                    vapidPublicKey,
+                    vapidPrivateKey,
+                    "mailto:contato@naesquina.com"
+            );
+
+            pushService.send(new nl.martijndwars.webpush.Notification(subscription, payload));
+        } catch (Exception e) {
+            System.err.println("Erro ao enviar Web Push: " + e.getMessage());
         }
     }
 

@@ -43,8 +43,10 @@ public class SecurityConfig {
                         // Libera consulta pública de produtos (GET) para a Home do Cliente / Busca
                         .requestMatchers(HttpMethod.GET, "/api/produtos", "/api/produtos/**").permitAll()
 
-                        // Libera TODOS os métodos HTTP para mercadinhos e categorias
-                        .requestMatchers("/api/mercadinhos", "/api/mercadinhos/**").permitAll()
+                        // Mercadinhos: qualquer um pode CONSULTAR (GET) e o comerciante pode se cadastrar (POST,
+                        // feito antes do login). Alterar (PUT) e apagar exigem estar logado.
+                        .requestMatchers(HttpMethod.GET, "/api/mercadinhos", "/api/mercadinhos/**").permitAll()
+                        .requestMatchers(HttpMethod.POST, "/api/mercadinhos").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/categorias", "/api/categorias/**").permitAll()
 
                         // Documentação Swagger e rotas de erro do Spring

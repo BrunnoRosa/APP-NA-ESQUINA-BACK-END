@@ -11,6 +11,9 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import com.example.app_na_esquina.exceptions.RecursoNaoEncontradoException;
 import com.example.app_na_esquina.exceptions.RegraNegocioException;
+import org.springframework.security.access.AccessDeniedException;
+import org.springframework.security.core.Authentication;
+import com.example.app_na_esquina.util.Validacoes;
 
 import java.util.List;
 import java.util.stream.Collectors;
@@ -43,16 +46,21 @@ public class MercadinhoController {
             throw new RegraNegocioException("O CNPJ deve ter 14 números.");
         }
 
-        // CEP: aceita "40015-000" ou "40015000", mas guarda só os 8 números
-        String cepDigitos = dto.getCep() == null ? "" : dto.getCep().replaceAll("\\D", "");
-        if (cepDigitos.length() != 8) {
-            throw new RegraNegocioException("O CEP deve ter 8 números.");
+        // Validações (util/Validacoes): cada uma devolve o valor limpo ou lança erro 400
+        String nomeFantasia = Validacoes.texto(dto.getNomeFantasia(), "o nome do mercadinho", 2, 100);
+        String endereco = Validacoes.texto(dto.getEndereco(), "o endereço", 5, 200);
+        String cepDigitos = Validacoes.cep(dto.getCep()); // guarda só os 8 números
+        Validacoes.horarios(dto.getHorarioAbertura(), dto.getHorarioFechamento());
+        Validacoes.coordenadas(dto.getLatitude(), dto.getLongitude());
+
+        if (dto.getIdComerciante() == null) {
+            throw new RegraNegocioException("Informe o comerciante dono do mercadinho.");
         }
 
         MercadinhoModel model = new MercadinhoModel();
-        model.setNomeFantasia(dto.getNomeFantasia());
+        model.setNomeFantasia(nomeFantasia);
         model.setCnpj(cnpjDigitos);
-        model.setEndereco(dto.getEndereco());
+        model.setEndereco(endereco);
         model.setCep(cepDigitos);
         model.setLatitude(dto.getLatitude());
         model.setLongitude(dto.getLongitude());
@@ -70,29 +78,44 @@ public class MercadinhoController {
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<MercadinhoResponseDTO> atualizar(@PathVariable Long id, @RequestBody MercadinhoRequestDTO dto) {
+    public ResponseEntity<MercadinhoResponseDTO> atualizar(
+            @PathVariable Long id,
+            @RequestBody MercadinhoRequestDTO dto,
+            Authentication authentication) {
         MercadinhoModel mercadinho = mercadinhoService.buscarPorId(id)
                 .orElseThrow(() -> new RecursoNaoEncontradoException("Mercadinho não encontrado."));
 
-        if (dto.getNomeFantasia() != null) mercadinho.setNomeFantasia(dto.getNomeFantasia());
-        if (dto.getEndereco() != null) mercadinho.setEndereco(dto.getEndereco());
-        if (dto.getCep() != null && !dto.getCep().trim().isEmpty()) {
-            String cepDigitos = dto.getCep().replaceAll("\\D", "");
-            if (cepDigitos.length() != 8) {
-                throw new RegraNegocioException("O CEP deve ter 8 números.");
-            }
-            mercadinho.setCep(cepDigitos);
+        // Só o DONO do mercadinho pode alterá-lo (o e-mail vem do token JWT)
+        if (authentication == null
+                || mercadinho.getComerciante() == null
+                || !mercadinho.getComerciante().getEmail().equalsIgnoreCase(authentication.getName())) {
+            throw new AccessDeniedException("Você não tem permissão para alterar este mercadinho.");
         }
+
+        if (dto.getNomeFantasia() != null)
+            mercadinho.setNomeFantasia(Validacoes.texto(dto.getNomeFantasia(), "o nome do mercadinho", 2, 100));
+        if (dto.getEndereco() != null)
+            mercadinho.setEndereco(Validacoes.texto(dto.getEndereco(), "o endereço", 5, 200));
+        if (dto.getCep() != null && !dto.getCep().trim().isEmpty())
+            mercadinho.setCep(Validacoes.cep(dto.getCep()));
+
+        Validacoes.coordenadas(dto.getLatitude(), dto.getLongitude());
         if (dto.getLatitude() != null) mercadinho.setLatitude(dto.getLatitude());
         if (dto.getLongitude() != null) mercadinho.setLongitude(dto.getLongitude());
+
         if (dto.getHorarioAbertura() != null) mercadinho.setHorarioAbertura(dto.getHorarioAbertura());
         if (dto.getHorarioFechamento() != null) mercadinho.setHorarioFechamento(dto.getHorarioFechamento());
+        // Confere a combinação final (mesmo que só um dos dois horários tenha sido enviado)
+        if (mercadinho.getHorarioAbertura() != null && mercadinho.getHorarioFechamento() != null) {
+            Validacoes.horarios(mercadinho.getHorarioAbertura(), mercadinho.getHorarioFechamento());
+        }
 
         if (dto.getCnpj() != null && !dto.getCnpj().trim().isEmpty()) {
             String cnpjDigitos = dto.getCnpj().replaceAll("\\D", "");
-            if (cnpjDigitos.length() == 14) {
-                mercadinho.setCnpj(cnpjDigitos);
+            if (cnpjDigitos.length() != 14) {
+                throw new RegraNegocioException("O CNPJ deve ter 14 números.");
             }
+            mercadinho.setCnpj(cnpjDigitos);
         }
 
         MercadinhoModel atualizado = mercadinhoService.salvar(mercadinho);
