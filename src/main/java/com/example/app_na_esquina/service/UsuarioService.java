@@ -6,6 +6,7 @@ import com.example.app_na_esquina.exceptions.RegraNegocioException;
 import com.example.app_na_esquina.model.UsuarioModel;
 import com.example.app_na_esquina.model.enums.PerfilUsuario;
 import com.example.app_na_esquina.repository.UsuarioRepository;
+import com.example.app_na_esquina.util.Validacoes;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -31,6 +32,9 @@ public class UsuarioService {
         if (dto.getConfirmarSenha() == null || !dto.getSenha().equals(dto.getConfirmarSenha())) {
             throw new RegraNegocioException("As senhas informadas não coincidem.");
         }
+
+        // Pega erros de digitação em provedores conhecidos (ex.: gmail.co -> sugere gmail.com)
+        Validacoes.dominioDoEmail(dto.getEmail());
 
         if (usuarioRepository.existsByEmail(dto.getEmail())) {
             throw new ConflitoException("Já existe uma conta cadastrada com este e-mail.");

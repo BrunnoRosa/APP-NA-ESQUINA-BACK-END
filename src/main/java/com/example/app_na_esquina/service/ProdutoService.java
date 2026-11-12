@@ -14,6 +14,8 @@ import com.example.app_na_esquina.util.GeoUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import com.example.app_na_esquina.exceptions.RecursoNaoEncontradoException;
+import com.example.app_na_esquina.util.Validacoes;
 
 import java.math.BigDecimal;
 import java.util.Comparator;
@@ -47,13 +49,15 @@ public class ProdutoService {
     @Transactional
     public ProdutoModel ativarOuAtualizarProdutoDoCatalogo(AtivarProdutoRequestDTO dto, String emailComercianteLogado) {
 
+        Validacoes.preco(dto.getPreco()); // preço obrigatório, maior que zero
+
         // 1. Busca o mercadinho de forma 100% segura usando o email extraído do Token JWT
         MercadinhoModel mercadinho = mercadinhoRepository.buscarPorEmailDoUsuario(emailComercianteLogado)
-                .orElseThrow(() -> new RuntimeException("Mercadinho não encontrado para o comerciante autenticado."));
+                .orElseThrow(() -> new RecursoNaoEncontradoException("Mercadinho não encontrado para o comerciante autenticado."));
 
         // 2. Busca o Produto Base
         ProdutoBaseModel produtoBase = produtoBaseRepository.findById(dto.getIdProdutoBase())
-                .orElseThrow(() -> new RuntimeException("Produto base não encontrado com ID: " + dto.getIdProdutoBase()));
+                .orElseThrow(() -> new RecursoNaoEncontradoException("Produto base não encontrado com ID: " + dto.getIdProdutoBase()));
 
         // 3. A lógica continua igual, mas agora usando o ID seguro do mercadinho
         Optional<ProdutoModel> produtoExistente = produtoRepository
@@ -79,7 +83,7 @@ public class ProdutoService {
     @Transactional
     public ProdutoModel atualizar(Long id, ProdutoModel dadosNovos, Long idCategoria) {
         ProdutoModel produto = produtoRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Produto não encontrado: " + id));
+                .orElseThrow(() -> new RecursoNaoEncontradoException("Produto não encontrado: " + id));
 
         if (dadosNovos.getPreco() != null) {
             produto.setPreco(dadosNovos.getPreco());
@@ -118,7 +122,7 @@ public class ProdutoService {
     @Transactional
     public ProdutoModel alternarStatus(Long id, Boolean ativo) {
         ProdutoModel produto = produtoRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Produto não encontrado com ID: " + id));
+                .orElseThrow(() -> new RecursoNaoEncontradoException("Produto não encontrado com ID: " + id));
 
         produto.setAtivo(ativo);
 

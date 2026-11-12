@@ -9,6 +9,7 @@ import com.example.app_na_esquina.repository.UsuarioRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import com.example.app_na_esquina.exceptions.RecursoNaoEncontradoException;
 
 import java.util.List;
 import java.util.stream.Collectors;
@@ -36,9 +37,9 @@ public class FavoritoService {
     public void adicionarFavorito(Long usuarioId, Long mercadinhoId) {
         if (!favoritoRepository.existsByUsuarioIdUsuarioAndMercadinhoIdMercadinho(usuarioId, mercadinhoId)) {
             UsuarioModel usuario = usuarioRepository.findById(usuarioId)
-                    .orElseThrow(() -> new RuntimeException("Usuário não encontrado"));
+                    .orElseThrow(() -> new RecursoNaoEncontradoException("Usuário não encontrado"));
             MercadinhoModel mercadinho = mercadinhoRepository.findById(mercadinhoId)
-                    .orElseThrow(() -> new RuntimeException("Mercadinho não encontrado"));
+                    .orElseThrow(() -> new RecursoNaoEncontradoException("Mercadinho não encontrado"));
 
             FavoritoModel favorito = new FavoritoModel(usuario, mercadinho);
             favoritoRepository.save(favorito);
