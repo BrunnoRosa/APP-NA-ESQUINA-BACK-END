@@ -15,6 +15,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.*;
+import com.example.app_na_esquina.util.Validacoes;
 
 import java.util.Map;
 import java.util.Optional;
@@ -70,12 +71,13 @@ public class UsuarioController {
         UsuarioModel usuario = usuarioRepository.findByEmail(authentication.getName())
                 .orElseThrow(() -> new RecursoNaoEncontradoException("Usuário não encontrado."));
 
-        if (body.containsKey("nome") && body.get("nome") != null) {
-            usuario.setNome(body.get("nome"));
+        // Valida e limpa os dados com as mesmas regras do cadastro (util/Validacoes)
+        if (body.get("nome") != null) {
+            usuario.setNome(Validacoes.nome(body.get("nome")));
         }
 
-        if (body.containsKey("telefone")) {
-            usuario.setTelefone(body.get("telefone"));
+        if (body.get("telefone") != null) {
+            usuario.setTelefone(Validacoes.telefone(body.get("telefone")));
         }
 
         UsuarioModel salvo = usuarioRepository.save(usuario);
@@ -96,9 +98,21 @@ public class UsuarioController {
         UsuarioModel usuario = usuarioRepository.findByEmail(authentication.getName())
                 .orElseThrow(() -> new RecursoNaoEncontradoException("Usuário não encontrado."));
 
-        String novaSenha = body.get("senha");
-        if (novaSenha == null || novaSenha.trim().isEmpty()) {
-            throw new RegraNegocioException("A nova senha é obrigatória.");
+        String senhaAtual = body.get("senhaAtual");
+        String novaSenha = body.get("senha") != null ? body.get("senha") : body.get("novaSenha");
+
+        // Confere a senha atual (assim, quem pegar o celular desbloqueado não troca a senha).
+        // Erro é 400 e não 401: o 401 faria o app deslogar a pessoa.
+        if (senhaAtual == null || senhaAtual.isEmpty()) {
+            throw new RegraNegocioException("Informe a senha atual.");
+        }
+        if (!passwordEncoder.matches(senhaAtual, usuario.getSenha())) {
+            throw new RegraNegocioException("A senha atual está incorreta.");
+        }
+
+        Validacoes.senha(novaSenha, "A nova senha");
+        if (novaSenha.equals(senhaAtual)) {
+            throw new RegraNegocioException("A nova senha deve ser diferente da atual.");
         }
 
         usuario.setSenha(passwordEncoder.encode(novaSenha));

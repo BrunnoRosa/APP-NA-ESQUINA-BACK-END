@@ -17,7 +17,8 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.*;
-
+import com.example.app_na_esquina.exceptions.RecursoNaoEncontradoException;
+import com.example.app_na_esquina.util.Validacoes;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -55,9 +56,13 @@ public class ProdutoController {
     // Cadastro manual de produto personalizado/avulso
     @PostMapping
     public ResponseEntity<ProdutoResponseDTO> cadastrar(@RequestBody ProdutoRequestDTO dto) {
+        // Validações (util/Validacoes): nome limpo e preço entre R$ 0,01 e R$ 99.999,99
+        String nomeProduto = Validacoes.nomeProduto(dto.getNome());
+        Validacoes.preco(dto.getPreco());
+
         ProdutoModel model = new ProdutoModel();
         model.setPreco(dto.getPreco());
-        model.setNomePersonalizado(dto.getNome());
+        model.setNomePersonalizado(nomeProduto);
         model.setImagemUrlPersonalizada(dto.getImagemUrl());
         model.setAtivo(true);
         model.setEmDestaque(false);
@@ -66,7 +71,7 @@ public class ProdutoController {
             // Busca pelo ID do mercadinho; se não achar, busca pelo ID do comerciante/usuário
             MercadinhoModel mercadinho = mercadinhoService.buscarPorId(dto.getIdMercadinho())
                     .orElseGet(() -> mercadinhoRepository.findByUsuarioIdUsuarioNative(dto.getIdMercadinho())
-                            .orElseThrow(() -> new RuntimeException("Mercadinho não encontrado para o ID enviado: " + dto.getIdMercadinho())));
+                            .orElseThrow(() -> new RecursoNaoEncontradoException("Mercadinho não encontrado para o ID enviado: " + dto.getIdMercadinho())));
             model.setMercadinho(mercadinho);
         }
 
@@ -119,6 +124,10 @@ public class ProdutoController {
     @PreAuthorize("hasAuthority('COMERCIANTE')")
     @PutMapping("/{id}")
     public ResponseEntity<ProdutoResponseDTO> atualizar(@PathVariable Long id, @RequestBody ProdutoRequestDTO dto) {
+        // Só valida o que foi enviado (os campos que vierem vazios não são alterados)
+        if (dto.getNome() != null) dto.setNome(Validacoes.nomeProduto(dto.getNome()));
+        if (dto.getPreco() != null) Validacoes.preco(dto.getPreco());
+
         ProdutoModel novosDados = new ProdutoModel();
         novosDados.setPreco(dto.getPreco());
         novosDados.setNomePersonalizado(dto.getNome());
@@ -135,7 +144,7 @@ public class ProdutoController {
             @RequestParam("emDestaque") Boolean emDestaque) {
 
         ProdutoModel model = produtoService.buscarPorId(id)
-                .orElseThrow(() -> new RuntimeException("Produto não encontrado com id: " + id));
+                .orElseThrow(() -> new RecursoNaoEncontradoException("Produto não encontrado com id: " + id));
 
         model.setEmDestaque(emDestaque != null ? emDestaque : false);
 
