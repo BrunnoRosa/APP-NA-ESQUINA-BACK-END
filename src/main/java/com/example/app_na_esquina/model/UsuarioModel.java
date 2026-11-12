@@ -28,7 +28,7 @@ public class UsuarioModel {
     @Column(nullable = false)
     private PerfilUsuario perfil;
 
-    @Column(name = "push_token")
+    @Column(name = "push_token", columnDefinition = "TEXT")
     private String pushToken;
 
     public String getPushToken() {
