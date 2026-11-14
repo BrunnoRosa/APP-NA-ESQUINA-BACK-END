@@ -1,3 +1,4 @@
+
 package com.example.app_na_esquina.dto.usuario;
 
 import com.example.app_na_esquina.model.enums.PerfilUsuario;
@@ -30,9 +31,20 @@ public class UsuarioRequestDTO {
     private String confirmarSenha;
 
     @NotBlank(message = "O telefone é obrigatório")
-    @Pattern(regexp = "^[1-9][1-9](9\\d{8}|[2-5]\\d{7})$",
-            message = "Telefone inválido. Informe DDD + número (ex.: 71 99999-9999)")
+    @Pattern(
+            regexp = "^[1-9][1-9](9\\d{8}|[2-5]\\d{7})$",
+            message = "Telefone inválido. Informe DDD + número (ex.: 71 99999-9999)"
+    )
     private String telefone;
+
+    // Endereço
+    private String cep;
+    private String rua;
+    private String numero;
+    private String bairro;
+    private String complemento;
+    private String cidade;
+    private String uf;
 
     @NotNull(message = "O perfil é obrigatório")
     private PerfilUsuario perfil;
@@ -48,6 +60,7 @@ public class UsuarioRequestDTO {
         this.perfil = perfil;
     }
 
+    // Nome
     public String getNome() {
         return nome;
     }
@@ -56,6 +69,7 @@ public class UsuarioRequestDTO {
         this.nome = (nome == null) ? null : nome.trim().replaceAll("\\s+", " ");
     }
 
+    // E-mail
     public String getEmail() {
         return email;
     }
@@ -64,6 +78,7 @@ public class UsuarioRequestDTO {
         this.email = (email == null) ? null : email.trim().toLowerCase(Locale.ROOT);
     }
 
+    // Senha
     public String getSenha() {
         return senha;
     }
@@ -80,6 +95,7 @@ public class UsuarioRequestDTO {
         this.confirmarSenha = confirmarSenha;
     }
 
+    // Telefone
     public String getTelefone() {
         return telefone;
     }
@@ -88,6 +104,70 @@ public class UsuarioRequestDTO {
         this.telefone = (telefone == null) ? null : telefone.replaceAll("\\D", "");
     }
 
+    // CEP
+    public String getCep() {
+        return cep;
+    }
+
+    public void setCep(String cep) {
+        this.cep = cep;
+    }
+
+    // Rua
+    public String getRua() {
+        return rua;
+    }
+
+    public void setRua(String rua) {
+        this.rua = rua;
+    }
+
+    // Número
+    public String getNumero() {
+        return numero;
+    }
+
+    public void setNumero(String numero) {
+        this.numero = numero;
+    }
+
+    // Bairro
+    public String getBairro() {
+        return bairro;
+    }
+
+    public void setBairro(String bairro) {
+        this.bairro = bairro;
+    }
+
+    // Complemento
+    public String getComplemento() {
+        return complemento;
+    }
+
+    public void setComplemento(String complemento) {
+        this.complemento = complemento;
+    }
+
+    // Cidade
+    public String getCidade() {
+        return cidade;
+    }
+
+    public void setCidade(String cidade) {
+        this.cidade = cidade;
+    }
+
+    // UF
+    public String getUf() {
+        return uf;
+    }
+
+    public void setUf(String uf) {
+        this.uf = uf;
+    }
+
+    // Perfil
     public PerfilUsuario getPerfil() {
         return perfil;
     }
