@@ -32,6 +32,8 @@ public class ProdutoModel {
 
     // Campos opcionais de sobrescrita (caso o comerciante queira usar nome/foto personalizados)
     private String nomePersonalizado;
+    // Foto enviada pelo comerciante (data URI base64) ou URL: precisa de coluna grande
+    @Column(columnDefinition = "LONGTEXT")
     private String imagemUrlPersonalizada;
 
     public ProdutoModel() {}
