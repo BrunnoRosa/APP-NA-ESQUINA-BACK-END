@@ -47,7 +47,24 @@ public class UsuarioService {
         usuario.setTelefone(dto.getTelefone());
         usuario.setPerfil(dto.getPerfil());
 
+        // Endereço: opcional para o back (o app exige para clientes). Se vier algo, valida tudo.
+        if (Validacoes.temEndereco(dto.getCep(), dto.getRua(), dto.getNumero(), dto.getBairro(), dto.getCidade(), dto.getUf())) {
+            aplicarEndereco(usuario, Validacoes.endereco(dto.getCep(), dto.getRua(), dto.getNumero(),
+                    dto.getBairro(), dto.getComplemento(), dto.getCidade(), dto.getUf()));
+        }
+
         return salvar(usuario);
+    }
+
+    // Copia o endereço já validado para o usuário (usado no cadastro e no PUT /me)
+    public void aplicarEndereco(UsuarioModel usuario, Validacoes.Endereco e) {
+        usuario.setCep(e.cep());
+        usuario.setRua(e.rua());
+        usuario.setNumero(e.numero());
+        usuario.setBairro(e.bairro());
+        usuario.setComplemento(e.complemento());
+        usuario.setCidade(e.cidade());
+        usuario.setUf(e.uf());
     }
 
     public UsuarioModel salvar(UsuarioModel usuario) {

@@ -48,8 +48,21 @@ public class MercadinhoController {
 
         // Validações (util/Validacoes): cada uma devolve o valor limpo ou lança erro 400
         String nomeFantasia = Validacoes.texto(dto.getNomeFantasia(), "o nome do mercadinho", 2, 100);
-        String endereco = Validacoes.texto(dto.getEndereco(), "o endereço", 5, 200);
-        String cepDigitos = Validacoes.cep(dto.getCep()); // guarda só os 8 números
+
+        // Endereço: se vier em campos separados (rua, número, bairro...), valida cada um e monta o texto;
+        // se não, aceita o texto único antigo em "endereco".
+        Validacoes.Endereco local = null;
+        String endereco;
+        String cepDigitos;
+        if (Validacoes.temEndereco(dto.getRua(), dto.getNumero(), dto.getBairro(), dto.getCidade(), dto.getUf())) {
+            local = Validacoes.endereco(dto.getCep(), dto.getRua(), dto.getNumero(), dto.getBairro(),
+                    dto.getComplemento(), dto.getCidade(), dto.getUf());
+            endereco = local.texto();
+            cepDigitos = local.cep();
+        } else {
+            endereco = Validacoes.texto(dto.getEndereco(), "o endereço", 5, 200);
+            cepDigitos = Validacoes.cep(dto.getCep()); // guarda só os 8 números
+        }
         Validacoes.horarios(dto.getHorarioAbertura(), dto.getHorarioFechamento());
         Validacoes.coordenadas(dto.getLatitude(), dto.getLongitude());
 
@@ -62,6 +75,7 @@ public class MercadinhoController {
         model.setCnpj(cnpjDigitos);
         model.setEndereco(endereco);
         model.setCep(cepDigitos);
+        aplicarEndereco(model, local);
         model.setLatitude(dto.getLatitude());
         model.setLongitude(dto.getLongitude());
         model.setHorarioAbertura(dto.getHorarioAbertura());
@@ -94,10 +108,20 @@ public class MercadinhoController {
 
         if (dto.getNomeFantasia() != null)
             mercadinho.setNomeFantasia(Validacoes.texto(dto.getNomeFantasia(), "o nome do mercadinho", 2, 100));
-        if (dto.getEndereco() != null)
-            mercadinho.setEndereco(Validacoes.texto(dto.getEndereco(), "o endereço", 5, 200));
-        if (dto.getCep() != null && !dto.getCep().trim().isEmpty())
-            mercadinho.setCep(Validacoes.cep(dto.getCep()));
+        if (Validacoes.temEndereco(dto.getRua(), dto.getNumero(), dto.getBairro(), dto.getCidade(), dto.getUf())) {
+            // Endereço em campos separados: valida tudo, monta o texto e guarda cada parte
+            Validacoes.Endereco local = Validacoes.endereco(dto.getCep(), dto.getRua(), dto.getNumero(),
+                    dto.getBairro(), dto.getComplemento(), dto.getCidade(), dto.getUf());
+            mercadinho.setEndereco(local.texto());
+            mercadinho.setCep(local.cep());
+            aplicarEndereco(mercadinho, local);
+        } else {
+            // Formato antigo (texto único), mantido para não quebrar quem ainda envia assim
+            if (dto.getEndereco() != null)
+                mercadinho.setEndereco(Validacoes.texto(dto.getEndereco(), "o endereço", 5, 200));
+            if (dto.getCep() != null && !dto.getCep().trim().isEmpty())
+                mercadinho.setCep(Validacoes.cep(dto.getCep()));
+        }
 
         Validacoes.coordenadas(dto.getLatitude(), dto.getLongitude());
         if (dto.getLatitude() != null) mercadinho.setLatitude(dto.getLatitude());
@@ -145,6 +169,16 @@ public class MercadinhoController {
         return ResponseEntity.ok(response);
     }
 
+    // Copia as partes do endereço (já validadas) para o mercadinho. Se "e" é nulo, não faz nada.
+    private void aplicarEndereco(MercadinhoModel model, Validacoes.Endereco e) {
+        if (e == null) return;
+        model.setRua(e.rua());
+        model.setNumero(e.numero());
+        model.setBairro(e.bairro());
+        model.setComplemento(e.complemento());
+        model.setCidade(e.cidade());
+        model.setUf(e.uf());
+    }
     // Método auxiliar para conversão de DTO
     private MercadinhoResponseDTO converterParaDTO(MercadinhoModel model) {
         MercadinhoResponseDTO dto = new MercadinhoResponseDTO();
@@ -152,6 +186,12 @@ public class MercadinhoController {
         dto.setNomeFantasia(model.getNomeFantasia());
         dto.setEndereco(model.getEndereco());
         dto.setCep(model.getCep());
+        dto.setRua(model.getRua());
+        dto.setNumero(model.getNumero());
+        dto.setBairro(model.getBairro());
+        dto.setComplemento(model.getComplemento());
+        dto.setCidade(model.getCidade());
+        dto.setUf(model.getUf());
         dto.setLatitude(model.getLatitude());
         dto.setLongitude(model.getLongitude());
         dto.setHorarioAbertura(model.getHorarioAbertura());

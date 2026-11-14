@@ -80,6 +80,13 @@ public class UsuarioController {
             usuario.setTelefone(Validacoes.telefone(body.get("telefone")));
         }
 
+        // Endereço (CEP, rua, número, bairro, complemento, cidade, UF): se algum campo veio, valida todos
+        if (Validacoes.temEndereco(body.get("cep"), body.get("rua"), body.get("numero"), body.get("bairro"),
+                body.get("cidade"), body.get("uf"))) {
+            usuarioService.aplicarEndereco(usuario, Validacoes.endereco(body.get("cep"), body.get("rua"),
+                    body.get("numero"), body.get("bairro"), body.get("complemento"), body.get("cidade"), body.get("uf")));
+        }
+
         UsuarioModel salvo = usuarioRepository.save(usuario);
         UsuarioResponseDTO response = converterParaDTO(salvo);
 
@@ -128,6 +135,13 @@ public class UsuarioController {
         response.setEmail(model.getEmail());
         response.setTelefone(model.getTelefone());
         response.setPerfil(model.getPerfil());
+        response.setCep(model.getCep());
+        response.setRua(model.getRua());
+        response.setNumero(model.getNumero());
+        response.setBairro(model.getBairro());
+        response.setComplemento(model.getComplemento());
+        response.setCidade(model.getCidade());
+        response.setUf(model.getUf());
         return response;
     }
     @PutMapping("/me/push-token")

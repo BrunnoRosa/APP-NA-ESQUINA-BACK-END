@@ -141,4 +141,57 @@ public final class Validacoes {
         if (valor <= 0) throw new RegraNegocioException("O preço deve ser maior que zero.");
         if (valor > 99999.99) throw new RegraNegocioException("O preço máximo é R$ 99.999,99.");
     }
+    // ---------------------------------------------------------------- endereço
+
+    private static final List<String> UFS = List.of(
+            "AC", "AL", "AP", "AM", "BA", "CE", "DF", "ES", "GO", "MA", "MT", "MS", "MG", "PA",
+            "PB", "PR", "PE", "PI", "RJ", "RN", "RS", "RO", "RR", "SC", "SP", "SE", "TO");
+
+    // Endereço já validado e limpo (o "record" é uma classe de dados imutável do Java).
+    // texto() é o que vai para a coluna "endereco", exibida em pedidos e buscas:
+    //   "Rua Chile, 123, Sala 2, Centro, Salvador - BA"
+    public record Endereco(String cep, String rua, String numero, String bairro,
+                           String complemento, String cidade, String uf) {
+        public String texto() {
+            StringBuilder sb = new StringBuilder(rua).append(", ").append(numero);
+            if (!complemento.isEmpty()) sb.append(", ").append(complemento);
+            sb.append(", ").append(bairro).append(", ").append(cidade).append(" - ").append(uf);
+            return sb.toString();
+        }
+    }
+
+    // true se pelo menos um desses campos veio preenchido (usado para saber se o endereço foi enviado)
+    public static boolean temEndereco(String... campos) {
+        for (String campo : campos) {
+            if (!limparEspacos(campo).isEmpty()) return true;
+        }
+        return false;
+    }
+
+    // Valida o endereço em campos separados (mesmas regras do utils/validacoes.js do front).
+    // O complemento é opcional.
+    public static Endereco endereco(String cep, String rua, String numero, String bairro,
+                                    String complemento, String cidade, String uf) {
+        String cepOk = cep(cep);
+        String ruaOk = texto(rua, "a rua", 3, 80);
+
+        String numeroOk = limparEspacos(numero);
+        if (numeroOk.isEmpty()) throw new RegraNegocioException("Informe o número ou S/N.");
+        if (numeroOk.length() > 10) throw new RegraNegocioException("O número deve ter no máximo 10 caracteres.");
+        if (!numeroOk.matches("^[0-9A-Za-z/\\-\\s]+$"))
+            throw new RegraNegocioException("Use só letras, números, / ou - no número.");
+
+        String bairroOk = texto(bairro, "o bairro", 2, 40);
+        String cidadeOk = texto(cidade, "a cidade", 2, 50);
+
+        String ufOk = limparEspacos(uf).toUpperCase(Locale.ROOT);
+        if (ufOk.isEmpty()) throw new RegraNegocioException("Informe o estado.");
+        if (!UFS.contains(ufOk)) throw new RegraNegocioException("Estado inválido. Ex.: BA.");
+
+        String complementoOk = limparEspacos(complemento);
+        if (complementoOk.length() > 60)
+            throw new RegraNegocioException("O complemento deve ter no máximo 60 caracteres.");
+
+        return new Endereco(cepOk, ruaOk, numeroOk, bairroOk, complementoOk, cidadeOk, ufOk);
+    }
 }
