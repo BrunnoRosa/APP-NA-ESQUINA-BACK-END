@@ -1,3 +1,4 @@
+
 package com.example.app_na_esquina.model;
 
 import jakarta.persistence.*;
@@ -20,6 +21,12 @@ public class MercadinhoModel {
     private String endereco;
 
     private String cep;
+    private String rua;
+    private String numero;
+    private String bairro;
+    private String complemento;
+    private String cidade;
+    private String uf;
 
     @Column(name = "latitude")
     private Double latitude;
@@ -34,10 +41,23 @@ public class MercadinhoModel {
     @JoinColumn(name = "comerciante_id", nullable = false)
     private UsuarioModel comerciante;
 
+    // Construtor vazio
     public MercadinhoModel() {
     }
 
-    public MercadinhoModel(Long idMercadinho, String nomeFantasia, String cnpj, String endereco, String cep, Double latitude, Double longitude, LocalTime horarioAbertura, LocalTime horarioFechamento, UsuarioModel comerciante) {
+    // Construtor completo original
+    public MercadinhoModel(
+            Long idMercadinho,
+            String nomeFantasia,
+            String cnpj,
+            String endereco,
+            String cep,
+            Double latitude,
+            Double longitude,
+            LocalTime horarioAbertura,
+            LocalTime horarioFechamento,
+            UsuarioModel comerciante) {
+
         this.idMercadinho = idMercadinho;
         this.nomeFantasia = nomeFantasia;
         this.cnpj = cnpj;
@@ -50,6 +70,7 @@ public class MercadinhoModel {
         this.comerciante = comerciante;
     }
 
+    // ID
     public Long getIdMercadinho() {
         return idMercadinho;
     }
@@ -58,6 +79,7 @@ public class MercadinhoModel {
         this.idMercadinho = idMercadinho;
     }
 
+    // Nome fantasia
     public String getNomeFantasia() {
         return nomeFantasia;
     }
@@ -66,6 +88,7 @@ public class MercadinhoModel {
         this.nomeFantasia = nomeFantasia;
     }
 
+    // CNPJ
     public String getCnpj() {
         return cnpj;
     }
@@ -74,6 +97,7 @@ public class MercadinhoModel {
         this.cnpj = cnpj;
     }
 
+    // Endereço completo
     public String getEndereco() {
         return endereco;
     }
@@ -82,6 +106,7 @@ public class MercadinhoModel {
         this.endereco = endereco;
     }
 
+    // CEP
     public String getCep() {
         return cep;
     }
@@ -90,6 +115,61 @@ public class MercadinhoModel {
         this.cep = cep;
     }
 
+    // Rua
+    public String getRua() {
+        return rua;
+    }
+
+    public void setRua(String rua) {
+        this.rua = rua;
+    }
+
+    // Número
+    public String getNumero() {
+        return numero;
+    }
+
+    public void setNumero(String numero) {
+        this.numero = numero;
+    }
+
+    // Bairro
+    public String getBairro() {
+        return bairro;
+    }
+
+    public void setBairro(String bairro) {
+        this.bairro = bairro;
+    }
+
+    // Complemento
+    public String getComplemento() {
+        return complemento;
+    }
+
+    public void setComplemento(String complemento) {
+        this.complemento = complemento;
+    }
+
+    // Cidade
+    public String getCidade() {
+        return cidade;
+    }
+
+    public void setCidade(String cidade) {
+        this.cidade = cidade;
+    }
+
+    // UF
+    public String getUf() {
+        return uf;
+    }
+
+    public void setUf(String uf) {
+        this.uf = uf;
+    }
+
+    // Latitude
     public Double getLatitude() {
         return latitude;
     }
@@ -98,6 +178,7 @@ public class MercadinhoModel {
         this.latitude = latitude;
     }
 
+    // Longitude
     public Double getLongitude() {
         return longitude;
     }
@@ -106,6 +187,7 @@ public class MercadinhoModel {
         this.longitude = longitude;
     }
 
+    // Horário de abertura
     public LocalTime getHorarioAbertura() {
         return horarioAbertura;
     }
@@ -114,6 +196,7 @@ public class MercadinhoModel {
         this.horarioAbertura = horarioAbertura;
     }
 
+    // Horário de fechamento
     public LocalTime getHorarioFechamento() {
         return horarioFechamento;
     }
@@ -122,6 +205,7 @@ public class MercadinhoModel {
         this.horarioFechamento = horarioFechamento;
     }
 
+    // Comerciante responsável
     public UsuarioModel getComerciante() {
         return comerciante;
     }
