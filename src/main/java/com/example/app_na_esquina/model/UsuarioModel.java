@@ -1,3 +1,4 @@
+
 package com.example.app_na_esquina.model;
 
 import com.example.app_na_esquina.model.enums.PerfilUsuario;
@@ -19,10 +20,19 @@ public class UsuarioModel {
     private String email;
 
     @Column(nullable = false)
-    @JsonProperty(access = JsonProperty.Access.WRITE_ONLY) // Isso impede que o hash da senha seja devolvido no JSON quando a API responder ao endpoint GET /api/usuarios/me.
+    @JsonProperty(access = JsonProperty.Access.WRITE_ONLY)
     private String senha;
 
     private String telefone;
+
+    // Endereço
+    private String cep;
+    private String rua;
+    private String numero;
+    private String bairro;
+    private String complemento;
+    private String cidade;
+    private String uf;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
@@ -31,18 +41,11 @@ public class UsuarioModel {
     @Column(name = "push_token", columnDefinition = "TEXT")
     private String pushToken;
 
-    public String getPushToken() {
-        return pushToken;
-    }
-
-    public void setPushToken(String pushToken) {
-        this.pushToken = pushToken;
-    }
-
     public UsuarioModel() {
     }
 
-    public UsuarioModel(Long idUsuario, String nome, String email, String senha, String telefone, PerfilUsuario perfil, String pushToken) {
+    public UsuarioModel(Long idUsuario, String nome, String email, String senha,
+                        String telefone, PerfilUsuario perfil, String pushToken) {
         this.idUsuario = idUsuario;
         this.nome = nome;
         this.email = email;
@@ -52,6 +55,7 @@ public class UsuarioModel {
         this.pushToken = pushToken;
     }
 
+    // ID
     public Long getIdUsuario() {
         return idUsuario;
     }
@@ -60,6 +64,7 @@ public class UsuarioModel {
         this.idUsuario = idUsuario;
     }
 
+    // Nome
     public String getNome() {
         return nome;
     }
@@ -68,6 +73,7 @@ public class UsuarioModel {
         this.nome = nome;
     }
 
+    // E-mail
     public String getEmail() {
         return email;
     }
@@ -76,6 +82,7 @@ public class UsuarioModel {
         this.email = email;
     }
 
+    // Senha
     public String getSenha() {
         return senha;
     }
@@ -84,6 +91,7 @@ public class UsuarioModel {
         this.senha = senha;
     }
 
+    // Telefone
     public String getTelefone() {
         return telefone;
     }
@@ -92,11 +100,84 @@ public class UsuarioModel {
         this.telefone = telefone;
     }
 
+    // CEP
+    public String getCep() {
+        return cep;
+    }
+
+    public void setCep(String cep) {
+        this.cep = cep;
+    }
+
+    // Rua
+    public String getRua() {
+        return rua;
+    }
+
+    public void setRua(String rua) {
+        this.rua = rua;
+    }
+
+    // Número
+    public String getNumero() {
+        return numero;
+    }
+
+    public void setNumero(String numero) {
+        this.numero = numero;
+    }
+
+    // Bairro
+    public String getBairro() {
+        return bairro;
+    }
+
+    public void setBairro(String bairro) {
+        this.bairro = bairro;
+    }
+
+    // Complemento
+    public String getComplemento() {
+        return complemento;
+    }
+
+    public void setComplemento(String complemento) {
+        this.complemento = complemento;
+    }
+
+    // Cidade
+    public String getCidade() {
+        return cidade;
+    }
+
+    public void setCidade(String cidade) {
+        this.cidade = cidade;
+    }
+
+    // UF
+    public String getUf() {
+        return uf;
+    }
+
+    public void setUf(String uf) {
+        this.uf = uf;
+    }
+
+    // Perfil
     public PerfilUsuario getPerfil() {
         return perfil;
     }
 
     public void setPerfil(PerfilUsuario perfil) {
         this.perfil = perfil;
+    }
+
+    // Push Token
+    public String getPushToken() {
+        return pushToken;
+    }
+
+    public void setPushToken(String pushToken) {
+        this.pushToken = pushToken;
     }
 }
