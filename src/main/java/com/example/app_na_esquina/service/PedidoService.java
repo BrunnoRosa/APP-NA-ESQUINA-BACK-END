@@ -13,6 +13,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.client.RestTemplate;
@@ -117,6 +118,15 @@ public class PedidoService {
         PedidoModel pedido = pedidoRepository.findById(idPedido)
                 .orElseThrow(() -> new RecursoNaoEncontradoException("Pedido não encontrado."));
 
+        // Pedido já concluído ou cancelado não muda mais (evita "reabrir" pedido por engano
+        // e resolve a corrida: o cliente cancela no mesmo instante em que a loja aceita).
+        if (pedido.getStatus() == StatusPedido.CANCELADO) {
+            throw new RegraNegocioException("Este pedido já foi cancelado.");
+        }
+        if (pedido.getStatus() == StatusPedido.RETIRADA_CONCLUIDO) {
+            throw new RegraNegocioException("Este pedido já foi concluído.");
+        }
+
         pedido.setStatus(novoStatus);
 
         if (novoStatus == StatusPedido.CANCELADO && motivo != null && !motivo.trim().isEmpty()) {
@@ -128,6 +138,34 @@ public class PedidoService {
         notificarMudancaStatus(salvo, novoStatus);
 
         return PedidoResponseDTO.de(salvo);
+    }
+
+    // Cancelamento feito pelo próprio cliente. Só vale enquanto o pedido NÃO foi concluído.
+    @Transactional
+    public PedidoResponseDTO cancelarPeloCliente(Long idPedido, String emailLogado) {
+        PedidoModel pedido = pedidoRepository.findById(idPedido)
+                .orElseThrow(() -> new RecursoNaoEncontradoException("Pedido não encontrado."));
+
+        // Só o dono do pedido pode cancelar (o e-mail vem do token, não do app)
+        if (pedido.getCliente() == null
+                || pedido.getCliente().getEmail() == null
+                || !pedido.getCliente().getEmail().equalsIgnoreCase(emailLogado)) {
+            throw new AccessDeniedException("Pedido de outro cliente.");
+        }
+
+        if (pedido.getStatus() == StatusPedido.CANCELADO) {
+            throw new RegraNegocioException("Este pedido já foi cancelado.");
+        }
+        if (pedido.getStatus() == StatusPedido.RETIRADA_CONCLUIDO) {
+            throw new RegraNegocioException("Este pedido já foi concluído e não pode mais ser cancelado.");
+        }
+
+        pedido.setStatus(StatusPedido.CANCELADO);
+        pedido.setMotivoCancelamento("Cancelado pelo cliente.");
+
+        // Sem push aqui: quem cancelou foi o próprio cliente. A loja vê a mudança na lista de
+        // pedidos (o app do comerciante confere a cada poucos segundos).
+        return PedidoResponseDTO.de(pedidoRepository.save(pedido));
     }
 
     private void notificarMudancaStatus(PedidoModel pedido, StatusPedido novoStatus) {

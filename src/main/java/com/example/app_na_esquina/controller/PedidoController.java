@@ -6,6 +6,7 @@ import com.example.app_na_esquina.model.enums.StatusPedido;
 import com.example.app_na_esquina.service.PedidoService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -30,6 +31,15 @@ public class PedidoController {
     @GetMapping("/mercadinho/{idMercadinho}")
     public ResponseEntity<List<PedidoResponseDTO>> listarPorMercadinho(@PathVariable Long idMercadinho) {
         return ResponseEntity.ok(pedidoService.buscarPorMercadinho(idMercadinho));
+    }
+
+    // O cliente cancela o PRÓPRIO pedido (enquanto ele não foi concluído).
+    // Quem está logado vem do token JWT, então não dá para cancelar o pedido de outra pessoa.
+    @PutMapping("/{idPedido}/cancelar")
+    public ResponseEntity<PedidoResponseDTO> cancelarPeloCliente(
+            @PathVariable Long idPedido,
+            Authentication authentication) {
+        return ResponseEntity.ok(pedidoService.cancelarPeloCliente(idPedido, authentication.getName()));
     }
 
     @PutMapping("/{idPedido}/status")
