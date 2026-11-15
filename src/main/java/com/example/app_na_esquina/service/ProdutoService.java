@@ -80,6 +80,13 @@ public class ProdutoService {
         return produtoRepository.save(produto);
     }
 
+    // Busca a categoria escolhida (null se nenhuma foi enviada)
+    public CategoriaModel buscarCategoriaPorId(Long idCategoria) {
+        if (idCategoria == null) return null;
+        return categoriaRepository.findById(idCategoria)
+                .orElseThrow(() -> new RecursoNaoEncontradoException("Categoria não encontrada: " + idCategoria));
+    }
+
     @Transactional
     public ProdutoModel atualizar(Long id, ProdutoModel dadosNovos, Long idCategoria) {
         ProdutoModel produto = produtoRepository.findById(id)
@@ -93,6 +100,10 @@ public class ProdutoService {
         }
         if (dadosNovos.getImagemUrlPersonalizada() != null) {
             produto.setImagemUrlPersonalizada(dadosNovos.getImagemUrlPersonalizada());
+        }
+        // Categoria escolhida pelo comerciante (vale também para produto do catálogo)
+        if (idCategoria != null) {
+            produto.setCategoriaPersonalizada(buscarCategoriaPorId(idCategoria));
         }
 
         return produtoRepository.save(produto);
