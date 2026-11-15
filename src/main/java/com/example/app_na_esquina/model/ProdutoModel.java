@@ -36,6 +36,11 @@ public class ProdutoModel {
     @Column(columnDefinition = "LONGTEXT")
     private String imagemUrlPersonalizada;
 
+    // Categoria escolhida pelo comerciante em produto avulso (sem produto do catálogo)
+    @ManyToOne(fetch = FetchType.EAGER)
+    @JoinColumn(name = "id_categoria_personalizada")
+    private CategoriaModel categoriaPersonalizada;
+
     public ProdutoModel() {}
 
     public ProdutoModel(Long idProduto, ProdutoBaseModel produtoBase, MercadinhoModel mercadinho, Double preco, Boolean emDestaque, Boolean ativo) {
@@ -61,8 +66,12 @@ public class ProdutoModel {
     }
 
     public CategoriaModel getCategoria() {
+        if (categoriaPersonalizada != null) return categoriaPersonalizada;
         return produtoBase != null ? produtoBase.getCategoria() : null;
     }
+
+    public CategoriaModel getCategoriaPersonalizada() { return categoriaPersonalizada; }
+    public void setCategoriaPersonalizada(CategoriaModel categoriaPersonalizada) { this.categoriaPersonalizada = categoriaPersonalizada; }
 
     public Long getIdProduto() { return idProduto; }
     public void setIdProduto(Long idProduto) { this.idProduto = idProduto; }

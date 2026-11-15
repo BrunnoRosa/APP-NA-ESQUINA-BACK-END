@@ -64,6 +64,7 @@ public class ProdutoController {
         model.setPreco(dto.getPreco());
         model.setNomePersonalizado(nomeProduto);
         model.setImagemUrlPersonalizada(dto.getImagemUrl());
+        model.setCategoriaPersonalizada(produtoService.buscarCategoriaPorId(dto.getIdCategoria()));
         model.setAtivo(true);
         model.setEmDestaque(false);
 
