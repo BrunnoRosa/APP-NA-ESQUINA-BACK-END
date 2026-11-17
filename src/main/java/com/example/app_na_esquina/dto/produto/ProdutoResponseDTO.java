@@ -11,11 +11,13 @@ public class ProdutoResponseDTO {
     private String imagemUrl;
     private Boolean emDestaque;
     private Boolean ativo;
+    private Boolean emPromocao;
+    private Double precoPromocional;
 
     public ProdutoResponseDTO() {
     }
 
-    public ProdutoResponseDTO(Long idProduto, String nome, String descricao, Double preco, CategoriaResponseDTO categoria, String imagemUrl, Boolean emDestaque, Boolean ativo) {
+    public ProdutoResponseDTO(Long idProduto, String nome, String descricao, Double preco, CategoriaResponseDTO categoria, String imagemUrl, Boolean emDestaque, Boolean ativo, Boolean emPromocao, Double precoPromocional) {
         this.idProduto = idProduto;
         this.nome = nome;
         this.descricao = descricao;
@@ -24,6 +26,8 @@ public class ProdutoResponseDTO {
         this.imagemUrl = imagemUrl;
         this.emDestaque = emDestaque;
         this.ativo = ativo;
+        this.emPromocao = emPromocao;
+        this.precoPromocional = precoPromocional;
     }
 
     public Long getIdProduto() {
@@ -88,5 +92,21 @@ public class ProdutoResponseDTO {
 
     public void setAtivo(Boolean ativo) {
         this.ativo = ativo;
+    }
+
+    public Boolean getEmPromocao() {
+        return emPromocao;
+    }
+
+    public void setEmPromocao(Boolean emPromocao) {
+        this.emPromocao = emPromocao;
+    }
+
+    public Double getPrecoPromocional() {
+        return precoPromocional;
+    }
+
+    public void setPrecoPromocional(Double precoPromocional) {
+        this.precoPromocional = precoPromocional;
     }
 }

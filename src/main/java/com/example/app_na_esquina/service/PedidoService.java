@@ -82,7 +82,7 @@ public class PedidoService {
                 throw new RegraNegocioException("O produto '" + produto.getNome() + "' não pertence ao mercadinho informado.");
             }
 
-            BigDecimal precoUnitario = BigDecimal.valueOf(produto.getPreco());
+            BigDecimal precoUnitario = BigDecimal.valueOf(produto.getPrecoVigente());
 
             ItemPedidoModel item = new ItemPedidoModel();
             item.setPedido(pedido);

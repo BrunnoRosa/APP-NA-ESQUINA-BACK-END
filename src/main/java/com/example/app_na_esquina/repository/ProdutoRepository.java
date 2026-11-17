@@ -24,4 +24,7 @@ public interface ProdutoRepository extends JpaRepository<ProdutoModel, Long> {
 
     // Busca por categoria através do relacionamento com o ProdutoBase
     List<ProdutoModel> findByProdutoBaseCategoriaIdCategoriaAndAtivoTrue(Long idCategoria);
+
+    // Conta quantos produtos o mercadinho tem em promoção ativa (limite de 10)
+    long countByMercadinhoIdMercadinhoAndEmPromocaoTrue(Long idMercadinho);
 }

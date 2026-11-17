@@ -41,18 +41,24 @@ public class ProdutoModel {
     @JoinColumn(name = "id_categoria_personalizada")
     private CategoriaModel categoriaPersonalizada;
 
-    public ProdutoModel() {}
+    @Column(name = "em_promocao")
+    private Boolean emPromocao = false;
 
-    public ProdutoModel(Long idProduto, ProdutoBaseModel produtoBase, MercadinhoModel mercadinho, Double preco, Boolean emDestaque, Boolean ativo) {
-        this.idProduto = idProduto;
-        this.produtoBase = produtoBase;
-        this.mercadinho = mercadinho;
-        this.preco = preco;
-        this.emDestaque = emDestaque;
-        this.ativo = ativo;
+    @Column(name = "preco_promocional")
+    private Double precoPromocional;
+
+    // Retorna o preço promocional se a promoção estiver ativa e válida; caso contrário, o preço normal
+    public Double getPrecoVigente() {
+        if (Boolean.TRUE.equals(emPromocao)
+                && precoPromocional != null
+                && precoPromocional > 0
+                && preco != null
+                && precoPromocional < preco) {
+            return precoPromocional;
+        }
+        return preco;
     }
 
-    // Métodos utilitários para obter dados unificados (Customizado ou do Catálogo Base)
     public String getNome() {
         return (nomePersonalizado != null && !nomePersonalizado.isBlank())
                 ? nomePersonalizado
@@ -70,30 +76,108 @@ public class ProdutoModel {
         return produtoBase != null ? produtoBase.getCategoria() : null;
     }
 
-    public CategoriaModel getCategoriaPersonalizada() { return categoriaPersonalizada; }
-    public void setCategoriaPersonalizada(CategoriaModel categoriaPersonalizada) { this.categoriaPersonalizada = categoriaPersonalizada; }
+    public ProdutoModel() {
+    }
 
-    public Long getIdProduto() { return idProduto; }
-    public void setIdProduto(Long idProduto) { this.idProduto = idProduto; }
+    public ProdutoModel(Long idProduto, ProdutoBaseModel produtoBase, MercadinhoModel mercadinho, Double preco, Boolean emDestaque, Boolean ativo, String nomePersonalizado, String imagemUrlPersonalizada, CategoriaModel categoriaPersonalizada, Boolean emPromocao, Double precoPromocional) {
+        this.idProduto = idProduto;
+        this.produtoBase = produtoBase;
+        this.mercadinho = mercadinho;
+        this.preco = preco;
+        this.emDestaque = emDestaque;
+        this.ativo = ativo;
+        this.nomePersonalizado = nomePersonalizado;
+        this.imagemUrlPersonalizada = imagemUrlPersonalizada;
+        this.categoriaPersonalizada = categoriaPersonalizada;
+        this.emPromocao = emPromocao;
+        this.precoPromocional = precoPromocional;
+    }
 
-    public ProdutoBaseModel getProdutoBase() { return produtoBase; }
-    public void setProdutoBase(ProdutoBaseModel produtoBase) { this.produtoBase = produtoBase; }
+    public Long getIdProduto() {
+        return idProduto;
+    }
 
-    public MercadinhoModel getMercadinho() { return mercadinho; }
-    public void setMercadinho(MercadinhoModel mercadinho) { this.mercadinho = mercadinho; }
+    public void setIdProduto(Long idProduto) {
+        this.idProduto = idProduto;
+    }
 
-    public Double getPreco() { return preco; }
-    public void setPreco(Double preco) { this.preco = preco; }
+    public ProdutoBaseModel getProdutoBase() {
+        return produtoBase;
+    }
 
-    public Boolean getEmDestaque() { return emDestaque; }
-    public void setEmDestaque(Boolean emDestaque) { this.emDestaque = emDestaque; }
+    public void setProdutoBase(ProdutoBaseModel produtoBase) {
+        this.produtoBase = produtoBase;
+    }
 
-    public Boolean getAtivo() { return ativo; }
-    public void setAtivo(Boolean ativo) { this.ativo = ativo; }
+    public MercadinhoModel getMercadinho() {
+        return mercadinho;
+    }
 
-    public String getNomePersonalizado() { return nomePersonalizado; }
-    public void setNomePersonalizado(String nomePersonalizado) { this.nomePersonalizado = nomePersonalizado; }
+    public void setMercadinho(MercadinhoModel mercadinho) {
+        this.mercadinho = mercadinho;
+    }
 
-    public String getImagemUrlPersonalizada() { return imagemUrlPersonalizada; }
-    public void setImagemUrlPersonalizada(String imagemUrlPersonalizada) { this.imagemUrlPersonalizada = imagemUrlPersonalizada; }
+    public Double getPreco() {
+        return preco;
+    }
+
+    public void setPreco(Double preco) {
+        this.preco = preco;
+    }
+
+    public Boolean getEmDestaque() {
+        return emDestaque;
+    }
+
+    public void setEmDestaque(Boolean emDestaque) {
+        this.emDestaque = emDestaque;
+    }
+
+    public Boolean getAtivo() {
+        return ativo;
+    }
+
+    public void setAtivo(Boolean ativo) {
+        this.ativo = ativo;
+    }
+
+    public String getNomePersonalizado() {
+        return nomePersonalizado;
+    }
+
+    public void setNomePersonalizado(String nomePersonalizado) {
+        this.nomePersonalizado = nomePersonalizado;
+    }
+
+    public String getImagemUrlPersonalizada() {
+        return imagemUrlPersonalizada;
+    }
+
+    public void setImagemUrlPersonalizada(String imagemUrlPersonalizada) {
+        this.imagemUrlPersonalizada = imagemUrlPersonalizada;
+    }
+
+    public CategoriaModel getCategoriaPersonalizada() {
+        return categoriaPersonalizada;
+    }
+
+    public void setCategoriaPersonalizada(CategoriaModel categoriaPersonalizada) {
+        this.categoriaPersonalizada = categoriaPersonalizada;
+    }
+
+    public Boolean getEmPromocao() {
+        return emPromocao;
+    }
+
+    public void setEmPromocao(Boolean emPromocao) {
+        this.emPromocao = emPromocao;
+    }
+
+    public Double getPrecoPromocional() {
+        return precoPromocional;
+    }
+
+    public void setPrecoPromocional(Double precoPromocional) {
+        this.precoPromocional = precoPromocional;
+    }
 }

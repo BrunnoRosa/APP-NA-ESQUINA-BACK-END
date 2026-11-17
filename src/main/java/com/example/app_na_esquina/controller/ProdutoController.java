@@ -139,6 +139,16 @@ public class ProdutoController {
     }
 
     @PreAuthorize("hasAuthority('COMERCIANTE')")
+    @PutMapping("/{id}/promocao")
+    public ResponseEntity<ProdutoResponseDTO> alternarPromocao(
+            @PathVariable("id") Long id,
+            @RequestParam("emPromocao") Boolean emPromocao,
+            @RequestParam(value = "precoPromocional", required = false) Double precoPromocional) {
+        ProdutoModel atualizado = produtoService.alternarPromocao(id, emPromocao, precoPromocional);
+        return ResponseEntity.ok(converterParaDTO(atualizado));
+    }
+
+    @PreAuthorize("hasAuthority('COMERCIANTE')")
     @PutMapping("/{id}/destaque")
     public ResponseEntity<ProdutoResponseDTO> alternarDestaque(
             @PathVariable("id") Long id,
@@ -186,6 +196,13 @@ public class ProdutoController {
         dto.setImagemUrl(model.getImagemUrl());
         dto.setEmDestaque(Boolean.TRUE.equals(model.getEmDestaque()));
         dto.setAtivo(model.getAtivo() != null ? model.getAtivo() : true);
+
+        boolean promoValida = Boolean.TRUE.equals(model.getEmPromocao())
+                && model.getPrecoPromocional() != null
+                && model.getPreco() != null
+                && model.getPrecoPromocional() < model.getPreco();
+        dto.setEmPromocao(promoValida);
+        dto.setPrecoPromocional(promoValida ? model.getPrecoPromocional() : null);
 
         if (model.getProdutoBase() != null) {
             dto.setDescricao(model.getProdutoBase().getDescricao());

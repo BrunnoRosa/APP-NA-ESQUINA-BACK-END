@@ -9,6 +9,8 @@ public class ProdutoBuscaDTO {
     private BigDecimal preco;
     private Boolean emDestaque;
     private String imagemUrl;
+    private Boolean emPromocao;
+    private BigDecimal precoPromocional;
 
     // Dados do Mercadinho
     private Long idMercadinho;
@@ -19,13 +21,15 @@ public class ProdutoBuscaDTO {
     public ProdutoBuscaDTO() {
     }
 
-    public ProdutoBuscaDTO(Long idProduto, String nome, String categoria, BigDecimal preco, Boolean emDestaque, String imagemUrl, Long idMercadinho, String nomeMercadinho, String enderecoMercadinho, Double distanciaKm) {
+    public ProdutoBuscaDTO(Long idProduto, String nome, String categoria, BigDecimal preco, Boolean emDestaque, String imagemUrl, Boolean emPromocao, BigDecimal precoPromocional, Long idMercadinho, String nomeMercadinho, String enderecoMercadinho, Double distanciaKm) {
         this.idProduto = idProduto;
         this.nome = nome;
         this.categoria = categoria;
         this.preco = preco;
         this.emDestaque = emDestaque;
         this.imagemUrl = imagemUrl;
+        this.emPromocao = emPromocao;
+        this.precoPromocional = precoPromocional;
         this.idMercadinho = idMercadinho;
         this.nomeMercadinho = nomeMercadinho;
         this.enderecoMercadinho = enderecoMercadinho;
@@ -78,6 +82,22 @@ public class ProdutoBuscaDTO {
 
     public void setImagemUrl(String imagemUrl) {
         this.imagemUrl = imagemUrl;
+    }
+
+    public Boolean getEmPromocao() {
+        return emPromocao;
+    }
+
+    public void setEmPromocao(Boolean emPromocao) {
+        this.emPromocao = emPromocao;
+    }
+
+    public BigDecimal getPrecoPromocional() {
+        return precoPromocional;
+    }
+
+    public void setPrecoPromocional(BigDecimal precoPromocional) {
+        this.precoPromocional = precoPromocional;
     }
 
     public Long getIdMercadinho() {
