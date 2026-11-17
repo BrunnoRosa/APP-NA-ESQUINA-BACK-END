@@ -35,10 +35,13 @@ public class PedidoModel {
     @Column(name = "motivo_cancelamento")
     private String motivoCancelamento;
 
+    @Column(length = 500)
+    private String motivoAjuste;
+
     public PedidoModel() {
     }
 
-    public PedidoModel(Long idPedido, UsuarioModel cliente, MercadinhoModel mercadinho, StatusPedido status, BigDecimal valorTotal, LocalDateTime dataCriacao, List<ItemPedidoModel> itens, String motivoCancelamento) {
+    public PedidoModel(Long idPedido, UsuarioModel cliente, MercadinhoModel mercadinho, StatusPedido status, BigDecimal valorTotal, LocalDateTime dataCriacao, List<ItemPedidoModel> itens, String motivoCancelamento, String motivoAjuste) {
         this.idPedido = idPedido;
         this.cliente = cliente;
         this.mercadinho = mercadinho;
@@ -47,6 +50,7 @@ public class PedidoModel {
         this.dataCriacao = dataCriacao;
         this.itens = itens;
         this.motivoCancelamento = motivoCancelamento;
+        this.motivoAjuste = motivoAjuste;
     }
 
     public Long getIdPedido() {
@@ -111,5 +115,13 @@ public class PedidoModel {
 
     public void setMotivoCancelamento(String motivoCancelamento) {
         this.motivoCancelamento = motivoCancelamento;
+    }
+
+    public String getMotivoAjuste() {
+        return motivoAjuste;
+    }
+
+    public void setMotivoAjuste(String motivoAjuste) {
+        this.motivoAjuste = motivoAjuste;
     }
 }

@@ -1,6 +1,7 @@
 package com.example.app_na_esquina.service;
 
 import com.example.app_na_esquina.dto.pedido.CriarPedidoDTO;
+import com.example.app_na_esquina.dto.pedido.EditarItensPedidoDTO;
 import com.example.app_na_esquina.dto.pedido.ItemPedidoDTO;
 import com.example.app_na_esquina.dto.pedido.PedidoResponseDTO;
 import com.example.app_na_esquina.exceptions.RecursoNaoEncontradoException;
@@ -13,12 +14,12 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
-import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.client.RestTemplate;
 
 import java.math.BigDecimal;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -118,8 +119,6 @@ public class PedidoService {
         PedidoModel pedido = pedidoRepository.findById(idPedido)
                 .orElseThrow(() -> new RecursoNaoEncontradoException("Pedido não encontrado."));
 
-        // Pedido já concluído ou cancelado não muda mais (evita "reabrir" pedido por engano
-        // e resolve a corrida: o cliente cancela no mesmo instante em que a loja aceita).
         if (pedido.getStatus() == StatusPedido.CANCELADO) {
             throw new RegraNegocioException("Este pedido já foi cancelado.");
         }
@@ -134,38 +133,110 @@ public class PedidoService {
         }
 
         PedidoModel salvo = pedidoRepository.save(pedido);
-
         notificarMudancaStatus(salvo, novoStatus);
 
         return PedidoResponseDTO.de(salvo);
     }
 
-    // Cancelamento feito pelo próprio cliente. Só vale enquanto o pedido NÃO foi concluído.
     @Transactional
-    public PedidoResponseDTO cancelarPeloCliente(Long idPedido, String emailLogado) {
+    public PedidoResponseDTO cancelarPeloCliente(Long idPedido, String emailUsuario, String motivo) {
         PedidoModel pedido = pedidoRepository.findById(idPedido)
                 .orElseThrow(() -> new RecursoNaoEncontradoException("Pedido não encontrado."));
 
-        // Só o dono do pedido pode cancelar (o e-mail vem do token, não do app)
-        if (pedido.getCliente() == null
-                || pedido.getCliente().getEmail() == null
-                || !pedido.getCliente().getEmail().equalsIgnoreCase(emailLogado)) {
-            throw new AccessDeniedException("Pedido de outro cliente.");
+        if (!pedido.getCliente().getEmail().equalsIgnoreCase(emailUsuario)) {
+            throw new RegraNegocioException("Você não tem permissão para cancelar este pedido.");
         }
 
-        if (pedido.getStatus() == StatusPedido.CANCELADO) {
-            throw new RegraNegocioException("Este pedido já foi cancelado.");
+        if (pedido.getStatus() == StatusPedido.RETIRADA_CONCLUIDO || pedido.getStatus() == StatusPedido.CANCELADO) {
+            throw new RegraNegocioException("Este pedido não pode mais ser cancelado.");
         }
-        if (pedido.getStatus() == StatusPedido.RETIRADA_CONCLUIDO) {
-            throw new RegraNegocioException("Este pedido já foi concluído e não pode mais ser cancelado.");
-        }
+
+        String justificativa = (motivo != null && !motivo.isBlank())
+                ? motivo.trim()
+                : "Cancelado pelo cliente.";
 
         pedido.setStatus(StatusPedido.CANCELADO);
-        pedido.setMotivoCancelamento("Cancelado pelo cliente.");
+        pedido.setMotivoCancelamento(justificativa);
 
-        // Sem push aqui: quem cancelou foi o próprio cliente. A loja vê a mudança na lista de
-        // pedidos (o app do comerciante confere a cada poucos segundos).
-        return PedidoResponseDTO.de(pedidoRepository.save(pedido));
+        PedidoModel salvo = pedidoRepository.save(pedido);
+        return PedidoResponseDTO.de(salvo);
+    }
+
+    @Transactional
+    public PedidoResponseDTO editarItensPedido(Long idPedido, EditarItensPedidoDTO dto) {
+        PedidoModel pedido = pedidoRepository.findById(idPedido)
+                .orElseThrow(() -> new RecursoNaoEncontradoException("Pedido não encontrado."));
+
+        if (pedido.getStatus() != StatusPedido.PENDENTE && pedido.getStatus() != StatusPedido.EM_SEPARACAO) {
+            throw new RegraNegocioException("Só é possível editar pedidos pendentes ou em separação.");
+        }
+
+        if (dto.getItens() == null || dto.getItens().isEmpty()) {
+            throw new RegraNegocioException("O pedido precisa manter pelo menos 1 item. Caso não tenha nenhum, cancele o pedido.");
+        }
+
+        Map<Long, Integer> quantidadesMantidas = new HashMap<>();
+        for (EditarItensPedidoDTO.ItemAjustadoDTO itemDto : dto.getItens()) {
+            if (itemDto.getIdItemPedido() != null && itemDto.getQuantidade() != null && itemDto.getQuantidade() > 0) {
+                quantidadesMantidas.put(itemDto.getIdItemPedido(), itemDto.getQuantidade());
+            }
+        }
+
+        if (quantidadesMantidas.isEmpty()) {
+            throw new RegraNegocioException("O pedido precisa manter pelo menos 1 item válido.");
+        }
+
+        pedido.getItens().removeIf(item -> !quantidadesMantidas.containsKey(item.getIdItemPedido()));
+
+        BigDecimal novoTotal = BigDecimal.ZERO;
+        for (var item : pedido.getItens()) {
+            int novaQtd = quantidadesMantidas.get(item.getIdItemPedido());
+            item.setQuantidade(novaQtd);
+            BigDecimal precoUnit = item.getPrecoUnitario() != null ? item.getPrecoUnitario() : BigDecimal.ZERO;
+            novoTotal = novoTotal.add(precoUnit.multiply(BigDecimal.valueOf(novaQtd)));
+        }
+
+        pedido.setValorTotal(novoTotal);
+        pedido.setStatus(StatusPedido.AGUARDANDO_APROVACAO_CLIENTE);
+        pedido.setMotivoAjuste(
+                (dto.getMotivoAjuste() != null && !dto.getMotivoAjuste().isBlank())
+                        ? dto.getMotivoAjuste().trim()
+                        : "Alguns itens estavam indisponíveis no estoque e foram removidos."
+        );
+
+        PedidoModel salvo = pedidoRepository.save(pedido);
+        notificarMudancaStatus(salvo, StatusPedido.AGUARDANDO_APROVACAO_CLIENTE);
+
+        return PedidoResponseDTO.de(salvo);
+    }
+
+    @Transactional
+    public PedidoResponseDTO responderAlteracaoCliente(
+            Long idPedido, String emailUsuario, boolean aprovado, String motivoRecusa) {
+        PedidoModel pedido = pedidoRepository.findById(idPedido)
+                .orElseThrow(() -> new RecursoNaoEncontradoException("Pedido não encontrado."));
+
+        if (!pedido.getCliente().getEmail().equalsIgnoreCase(emailUsuario)) {
+            throw new RegraNegocioException("Você não tem permissão para alterar este pedido.");
+        }
+
+        if (pedido.getStatus() != StatusPedido.AGUARDANDO_APROVACAO_CLIENTE) {
+            throw new RegraNegocioException("Este pedido não está aguardando aprovação de alteração.");
+        }
+
+        if (aprovado) {
+            pedido.setStatus(StatusPedido.EM_SEPARACAO);
+        } else {
+            pedido.setStatus(StatusPedido.CANCELADO);
+            pedido.setMotivoCancelamento(
+                    (motivoRecusa != null && !motivoRecusa.isBlank())
+                            ? motivoRecusa.trim()
+                            : "Cliente não aceitou a alteração dos itens do pedido."
+            );
+        }
+
+        PedidoModel salvo = pedidoRepository.save(pedido);
+        return PedidoResponseDTO.de(salvo);
     }
 
     private void notificarMudancaStatus(PedidoModel pedido, StatusPedido novoStatus) {
@@ -181,7 +252,6 @@ public class PedidoService {
 
                 String token = cliente.getPushToken().trim();
 
-                // Se começar com '{', é uma subscrição Web Push (JSON); caso contrário, é Expo Mobile Token
                 if (token.startsWith("{")) {
                     enviarWebPushNotification(token, titulo, mensagem);
                 } else {
@@ -254,10 +324,10 @@ public class PedidoService {
         return switch (status) {
             case PENDENTE -> "Pedido Pendente";
             case EM_SEPARACAO -> "Produto em separação";
+            case AGUARDANDO_APROVACAO_CLIENTE -> "Aguardando sua aprovação (itens ajustados)";
             case AGUARDANDO_RETIRADA -> "Produto aguardando retirada";
             case RETIRADA_CONCLUIDO -> "Produto Entregue";
             case CANCELADO -> "Pedido Cancelado";
-            default -> status.name();
         };
     }
 }
