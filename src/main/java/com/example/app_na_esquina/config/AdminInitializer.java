@@ -33,6 +33,7 @@ public class AdminInitializer implements CommandLineRunner {
             admin.setSenha(passwordEncoder.encode(adminSenha));
             admin.setTelefone("71999990000");
             admin.setPerfil(PerfilUsuario.ADMIN);
+            admin.setEmailVerificado(true); // admin não passa pela confirmação por e-mail
             usuarioRepository.save(admin);
         }
     }

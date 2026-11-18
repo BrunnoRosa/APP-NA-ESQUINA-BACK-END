@@ -47,6 +47,9 @@ public class AdminController {
     @Autowired
     private PasswordEncoder passwordEncoder;
 
+    @Autowired
+    private TokenVerificacaoRepository tokenVerificacaoRepository;
+
     @GetMapping("/resumo")
     public ResponseEntity<?> obterResumo() {
         List<UsuarioModel> usuarios = usuarioRepository.findAll();
@@ -111,6 +114,9 @@ public class AdminController {
         if (authentication != null && usuario.getEmail().equalsIgnoreCase(authentication.getName())) {
             throw new RegraNegocioException("Você não pode excluir sua própria conta de administrador.");
         }
+
+        // 0. Remove tokens de confirmação de e-mail (FK para o usuário)
+        tokenVerificacaoRepository.deleteByUsuarioIdUsuario(id);
 
         // 1. Limpa favoritos e pedidos feitos como cliente
         favoritoRepository.deleteAll(favoritoRepository.findByUsuarioIdUsuario(id));

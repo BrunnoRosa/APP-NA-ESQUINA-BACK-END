@@ -14,4 +14,7 @@ public interface UsuarioRepository extends JpaRepository<UsuarioModel, Long> {
 
     // Responde só "existe ou não" (mais leve que trazer o usuário inteiro). Usado no cadastro.
     boolean existsByEmail(String email);
+
+    // Contas que não confirmaram o e-mail e foram criadas antes do limite (limpeza agendada)
+    java.util.List<UsuarioModel> findByEmailVerificadoFalseAndDataCriacaoBefore(java.time.LocalDateTime limite);
 }
