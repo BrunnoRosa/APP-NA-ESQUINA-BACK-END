@@ -17,4 +17,6 @@ public interface FavoritoRepository extends JpaRepository<FavoritoModel, Long> {
     boolean existsByUsuarioIdUsuarioAndMercadinhoIdMercadinho(Long idUsuario, Long idMercadinho);
 
     void deleteByUsuarioIdUsuarioAndMercadinhoIdMercadinho(Long idUsuario, Long idMercadinho);
+
+    void deleteByMercadinhoIdMercadinho(Long idMercadinho);
 }
