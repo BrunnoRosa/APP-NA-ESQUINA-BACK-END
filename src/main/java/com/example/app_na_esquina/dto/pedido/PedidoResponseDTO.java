@@ -21,13 +21,18 @@ public record PedidoResponseDTO(
 
     public record ClienteResumo(Long idUsuario, String nome, String email) {}
 
-    public record MercadinhoResumo(Long idMercadinho, String nomeFantasia, String endereco) {}
+    public record MercadinhoResumo(
+            Long idMercadinho,
+            String nomeFantasia,
+            String endereco,
+            Double latitude,
+            Double longitude
+    ) {}
 
     public record ProdutoResumo(Long idProduto, String nome, String imagemUrl) {}
 
     public record ItemResumo(Long idItemPedido, Integer quantidade, BigDecimal precoUnitario, ProdutoResumo produto) {}
 
-    // Converte a entidade do banco no objeto enxuto que vai para o app
     public static PedidoResponseDTO de(PedidoModel p) {
         ClienteResumo cliente = p.getCliente() == null ? null
                 : new ClienteResumo(
@@ -39,7 +44,9 @@ public record PedidoResponseDTO(
                 : new MercadinhoResumo(
                 p.getMercadinho().getIdMercadinho(),
                 p.getMercadinho().getNomeFantasia(),
-                p.getMercadinho().getEndereco());
+                p.getMercadinho().getEndereco(),
+                p.getMercadinho().getLatitude(),
+                p.getMercadinho().getLongitude());
 
         List<ItemResumo> itens = p.getItens().stream()
                 .map(PedidoResponseDTO::converterItem)
