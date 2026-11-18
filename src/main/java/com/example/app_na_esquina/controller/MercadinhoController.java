@@ -2,18 +2,18 @@ package com.example.app_na_esquina.controller;
 
 import com.example.app_na_esquina.dto.mercadinho.MercadinhoRequestDTO;
 import com.example.app_na_esquina.dto.mercadinho.MercadinhoResponseDTO;
+import com.example.app_na_esquina.exceptions.RecursoNaoEncontradoException;
+import com.example.app_na_esquina.exceptions.RegraNegocioException;
 import com.example.app_na_esquina.model.MercadinhoModel;
 import com.example.app_na_esquina.model.UsuarioModel;
 import com.example.app_na_esquina.service.MercadinhoService;
 import com.example.app_na_esquina.service.UsuarioService;
+import com.example.app_na_esquina.util.Validacoes;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.*;
-import com.example.app_na_esquina.exceptions.RecursoNaoEncontradoException;
-import com.example.app_na_esquina.exceptions.RegraNegocioException;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.core.Authentication;
-import com.example.app_na_esquina.util.Validacoes;
+import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 import java.util.stream.Collectors;
@@ -46,11 +46,8 @@ public class MercadinhoController {
             throw new RegraNegocioException("O CNPJ deve ter 14 números.");
         }
 
-        // Validações (util/Validacoes): cada uma devolve o valor limpo ou lança erro 400
         String nomeFantasia = Validacoes.texto(dto.getNomeFantasia(), "o nome do mercadinho", 2, 100);
 
-        // Endereço: se vier em campos separados (rua, número, bairro...), valida cada um e monta o texto;
-        // se não, aceita o texto único antigo em "endereco".
         Validacoes.Endereco local = null;
         String endereco;
         String cepDigitos;
@@ -61,9 +58,9 @@ public class MercadinhoController {
             cepDigitos = local.cep();
         } else {
             endereco = Validacoes.texto(dto.getEndereco(), "o endereço", 5, 200);
-            cepDigitos = Validacoes.cep(dto.getCep()); // guarda só os 8 números
+            cepDigitos = Validacoes.cep(dto.getCep());
         }
-        Validacoes.horarios(dto.getHorarioAbertura(), dto.getHorarioFechamento());
+
         Validacoes.coordenadas(dto.getLatitude(), dto.getLongitude());
 
         if (dto.getIdComerciante() == null) {
@@ -78,10 +75,9 @@ public class MercadinhoController {
         aplicarEndereco(model, local);
         model.setLatitude(dto.getLatitude());
         model.setLongitude(dto.getLongitude());
-        model.setHorarioAbertura(dto.getHorarioAbertura());
-        model.setHorarioFechamento(dto.getHorarioFechamento());
 
-        // Vincula o dono ao mercadinho
+        aplicarHorarios(model, dto, true);
+
         UsuarioModel dono = usuarioService.buscarPorId(dto.getIdComerciante())
                 .orElseThrow(() -> new RecursoNaoEncontradoException("Comerciante não encontrado."));
         model.setComerciante(dono);
@@ -99,7 +95,6 @@ public class MercadinhoController {
         MercadinhoModel mercadinho = mercadinhoService.buscarPorId(id)
                 .orElseThrow(() -> new RecursoNaoEncontradoException("Mercadinho não encontrado."));
 
-        // Só o DONO do mercadinho pode alterá-lo (o e-mail vem do token JWT)
         if (authentication == null
                 || mercadinho.getComerciante() == null
                 || !mercadinho.getComerciante().getEmail().equalsIgnoreCase(authentication.getName())) {
@@ -108,15 +103,14 @@ public class MercadinhoController {
 
         if (dto.getNomeFantasia() != null)
             mercadinho.setNomeFantasia(Validacoes.texto(dto.getNomeFantasia(), "o nome do mercadinho", 2, 100));
+
         if (Validacoes.temEndereco(dto.getRua(), dto.getNumero(), dto.getBairro(), dto.getCidade(), dto.getUf())) {
-            // Endereço em campos separados: valida tudo, monta o texto e guarda cada parte
             Validacoes.Endereco local = Validacoes.endereco(dto.getCep(), dto.getRua(), dto.getNumero(),
                     dto.getBairro(), dto.getComplemento(), dto.getCidade(), dto.getUf());
             mercadinho.setEndereco(local.texto());
             mercadinho.setCep(local.cep());
             aplicarEndereco(mercadinho, local);
         } else {
-            // Formato antigo (texto único), mantido para não quebrar quem ainda envia assim
             if (dto.getEndereco() != null)
                 mercadinho.setEndereco(Validacoes.texto(dto.getEndereco(), "o endereço", 5, 200));
             if (dto.getCep() != null && !dto.getCep().trim().isEmpty())
@@ -127,12 +121,7 @@ public class MercadinhoController {
         if (dto.getLatitude() != null) mercadinho.setLatitude(dto.getLatitude());
         if (dto.getLongitude() != null) mercadinho.setLongitude(dto.getLongitude());
 
-        if (dto.getHorarioAbertura() != null) mercadinho.setHorarioAbertura(dto.getHorarioAbertura());
-        if (dto.getHorarioFechamento() != null) mercadinho.setHorarioFechamento(dto.getHorarioFechamento());
-        // Confere a combinação final (mesmo que só um dos dois horários tenha sido enviado)
-        if (mercadinho.getHorarioAbertura() != null && mercadinho.getHorarioFechamento() != null) {
-            Validacoes.horarios(mercadinho.getHorarioAbertura(), mercadinho.getHorarioFechamento());
-        }
+        aplicarHorarios(mercadinho, dto, false);
 
         if (dto.getCnpj() != null && !dto.getCnpj().trim().isEmpty()) {
             String cnpjDigitos = dto.getCnpj().replaceAll("\\D", "");
@@ -169,7 +158,95 @@ public class MercadinhoController {
         return ResponseEntity.ok(response);
     }
 
-    // Copia as partes do endereço (já validadas) para o mercadinho. Se "e" é nulo, não faz nada.
+    private void aplicarHorarios(MercadinhoModel model, MercadinhoRequestDTO dto, boolean obrigatorio) {
+        boolean temDetalhado = dto.getAbreSegSex() != null
+                || dto.getAbreSabado() != null
+                || dto.getAbreDomingo() != null
+                || dto.getHorarioAberturaSegSex() != null
+                || dto.getHorarioAberturaSabado() != null
+                || dto.getHorarioAberturaDomingo() != null;
+
+        if (temDetalhado) {
+            boolean segSex = Boolean.TRUE.equals(dto.getAbreSegSex());
+            boolean sabado = Boolean.TRUE.equals(dto.getAbreSabado());
+            boolean domingo = Boolean.TRUE.equals(dto.getAbreDomingo());
+
+            if (!segSex && !sabado && !domingo) {
+                throw new RegraNegocioException("O mercadinho deve funcionar em pelo menos um período da semana.");
+            }
+
+            if (segSex) {
+                Validacoes.horarios(dto.getHorarioAberturaSegSex(), dto.getHorarioFechamentoSegSex());
+                model.setAbreSegSex(true);
+                model.setHorarioAberturaSegSex(dto.getHorarioAberturaSegSex());
+                model.setHorarioFechamentoSegSex(dto.getHorarioFechamentoSegSex());
+            } else {
+                model.setAbreSegSex(false);
+                model.setHorarioAberturaSegSex(null);
+                model.setHorarioFechamentoSegSex(null);
+            }
+
+            if (sabado) {
+                Validacoes.horarios(dto.getHorarioAberturaSabado(), dto.getHorarioFechamentoSabado());
+                model.setAbreSabado(true);
+                model.setHorarioAberturaSabado(dto.getHorarioAberturaSabado());
+                model.setHorarioFechamentoSabado(dto.getHorarioFechamentoSabado());
+            } else {
+                model.setAbreSabado(false);
+                model.setHorarioAberturaSabado(null);
+                model.setHorarioFechamentoSabado(null);
+            }
+
+            if (domingo) {
+                Validacoes.horarios(dto.getHorarioAberturaDomingo(), dto.getHorarioFechamentoDomingo());
+                model.setAbreDomingo(true);
+                model.setHorarioAberturaDomingo(dto.getHorarioAberturaDomingo());
+                model.setHorarioFechamentoDomingo(dto.getHorarioFechamentoDomingo());
+            } else {
+                model.setAbreDomingo(false);
+                model.setHorarioAberturaDomingo(null);
+                model.setHorarioFechamentoDomingo(null);
+            }
+
+            // Sincroniza os campos legados com o primeiro período ativo
+            if (segSex) {
+                model.setHorarioAbertura(dto.getHorarioAberturaSegSex());
+                model.setHorarioFechamento(dto.getHorarioFechamentoSegSex());
+            } else if (sabado) {
+                model.setHorarioAbertura(dto.getHorarioAberturaSabado());
+                model.setHorarioFechamento(dto.getHorarioFechamentoSabado());
+            } else {
+                model.setHorarioAbertura(dto.getHorarioAberturaDomingo());
+                model.setHorarioFechamento(dto.getHorarioFechamentoDomingo());
+            }
+            return;
+        }
+
+        // Compatibilidade com requisições antigas (apenas horarioAbertura e horarioFechamento)
+        if (obrigatorio) {
+            Validacoes.horarios(dto.getHorarioAbertura(), dto.getHorarioFechamento());
+        }
+        if (dto.getHorarioAbertura() != null) model.setHorarioAbertura(dto.getHorarioAbertura());
+        if (dto.getHorarioFechamento() != null) model.setHorarioFechamento(dto.getHorarioFechamento());
+
+        if (model.getHorarioAbertura() != null && model.getHorarioFechamento() != null) {
+            Validacoes.horarios(model.getHorarioAbertura(), model.getHorarioFechamento());
+            if (obrigatorio) {
+                model.setAbreSegSex(true);
+                model.setHorarioAberturaSegSex(model.getHorarioAbertura());
+                model.setHorarioFechamentoSegSex(model.getHorarioFechamento());
+
+                model.setAbreSabado(true);
+                model.setHorarioAberturaSabado(model.getHorarioAbertura());
+                model.setHorarioFechamentoSabado(model.getHorarioFechamento());
+
+                model.setAbreDomingo(true);
+                model.setHorarioAberturaDomingo(model.getHorarioAbertura());
+                model.setHorarioFechamentoDomingo(model.getHorarioFechamento());
+            }
+        }
+    }
+
     private void aplicarEndereco(MercadinhoModel model, Validacoes.Endereco e) {
         if (e == null) return;
         model.setRua(e.rua());
@@ -179,7 +256,7 @@ public class MercadinhoController {
         model.setCidade(e.cidade());
         model.setUf(e.uf());
     }
-    // Método auxiliar para conversão de DTO
+
     private MercadinhoResponseDTO converterParaDTO(MercadinhoModel model) {
         MercadinhoResponseDTO dto = new MercadinhoResponseDTO();
         dto.setIdMercadinho(model.getIdMercadinho());
@@ -196,6 +273,38 @@ public class MercadinhoController {
         dto.setLongitude(model.getLongitude());
         dto.setHorarioAbertura(model.getHorarioAbertura());
         dto.setHorarioFechamento(model.getHorarioFechamento());
+
+        boolean temDetalhado = model.getAbreSegSex() != null
+                || model.getAbreSabado() != null
+                || model.getAbreDomingo() != null;
+
+        if (temDetalhado) {
+            dto.setAbreSegSex(model.getAbreSegSex());
+            dto.setHorarioAberturaSegSex(model.getHorarioAberturaSegSex());
+            dto.setHorarioFechamentoSegSex(model.getHorarioFechamentoSegSex());
+
+            dto.setAbreSabado(model.getAbreSabado());
+            dto.setHorarioAberturaSabado(model.getHorarioAberturaSabado());
+            dto.setHorarioFechamentoSabado(model.getHorarioFechamentoSabado());
+
+            dto.setAbreDomingo(model.getAbreDomingo());
+            dto.setHorarioAberturaDomingo(model.getHorarioAberturaDomingo());
+            dto.setHorarioFechamentoDomingo(model.getHorarioFechamentoDomingo());
+        } else {
+            // Fallback automático para mercadinhos antigos já salvos no banco
+            dto.setAbreSegSex(true);
+            dto.setHorarioAberturaSegSex(model.getHorarioAbertura());
+            dto.setHorarioFechamentoSegSex(model.getHorarioFechamento());
+
+            dto.setAbreSabado(true);
+            dto.setHorarioAberturaSabado(model.getHorarioAbertura());
+            dto.setHorarioFechamentoSabado(model.getHorarioFechamento());
+
+            dto.setAbreDomingo(true);
+            dto.setHorarioAberturaDomingo(model.getHorarioAbertura());
+            dto.setHorarioFechamentoDomingo(model.getHorarioFechamento());
+        }
+
         if (model.getComerciante() != null) {
             dto.setTelefone(model.getComerciante().getTelefone());
         }
