@@ -23,6 +23,9 @@ public class UsuarioService {
     @Autowired
     private PasswordEncoder passwordEncoder;
 
+    @Autowired
+    private VerificacaoEmailService verificacaoEmailService;
+
     @Transactional
     public UsuarioModel cadastrar(UsuarioRequestDTO dto) {
         if (dto.getPerfil() == PerfilUsuario.ADMIN) {
@@ -36,7 +39,14 @@ public class UsuarioService {
         // Pega erros de digitação em provedores conhecidos (ex.: gmail.co -> sugere gmail.com)
         Validacoes.dominioDoEmail(dto.getEmail());
 
-        if (usuarioRepository.existsByEmail(dto.getEmail())) {
+        Optional<UsuarioModel> existente = usuarioRepository.findByEmail(dto.getEmail());
+        if (existente.isPresent()) {
+            if (!existente.get().isEmailVerificado()) {
+                // Cadastro feito, mas e-mail não confirmado: manda o link de novo em vez de deixar o usuário preso
+                verificacaoEmailService.reenviar(dto.getEmail());
+                throw new ConflitoException("Este e-mail já foi cadastrado, mas ainda não foi confirmado. "
+                        + "Reenviamos o link de confirmação para a sua caixa de entrada.");
+            }
             throw new ConflitoException("Já existe uma conta cadastrada com este e-mail.");
         }
 
@@ -53,7 +63,11 @@ public class UsuarioService {
                     dto.getBairro(), dto.getComplemento(), dto.getCidade(), dto.getUf()));
         }
 
-        return salvar(usuario);
+        UsuarioModel salvo = salvar(usuario);
+
+        // Conta nasce NÃO confirmada: o link chega por e-mail e só depois o login é liberado
+        verificacaoEmailService.enviarLink(salvo);
+        return salvo;
     }
 
     // Copia o endereço já validado para o usuário (usado no cadastro e no PUT /me)

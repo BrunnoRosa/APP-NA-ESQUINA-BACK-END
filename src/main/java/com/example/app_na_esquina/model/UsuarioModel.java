@@ -41,6 +41,14 @@ public class UsuarioModel {
     @Column(name = "push_token", columnDefinition = "TEXT")
     private String pushToken;
 
+    // E-mail confirmado pelo link enviado no cadastro. Sem isso o login é recusado.
+    @Column(name = "email_verificado", nullable = false, columnDefinition = "TINYINT(1) DEFAULT 0")
+    private boolean emailVerificado = false;
+
+    // Quando a conta foi criada (usada para apagar contas não confirmadas). Contas antigas ficam nulas.
+    @Column(name = "data_criacao")
+    private java.time.LocalDateTime dataCriacao = java.time.LocalDateTime.now();
+
     public UsuarioModel() {
     }
 
@@ -179,5 +187,19 @@ public class UsuarioModel {
 
     public void setPushToken(String pushToken) {
         this.pushToken = pushToken;
+    }
+
+    // E-mail verificado
+    public boolean isEmailVerificado() {
+        return emailVerificado;
+    }
+
+    public void setEmailVerificado(boolean emailVerificado) {
+        this.emailVerificado = emailVerificado;
+    }
+
+    // Data de criação
+    public java.time.LocalDateTime getDataCriacao() {
+        return dataCriacao;
     }
 }
