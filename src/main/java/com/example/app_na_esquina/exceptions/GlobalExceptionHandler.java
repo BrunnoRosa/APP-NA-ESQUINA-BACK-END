@@ -108,6 +108,12 @@ public class GlobalExceptionHandler {
         return montar(HttpStatus.UNAUTHORIZED, "Credenciais Inválidas", "E-mail ou senha incorretos.", request);
     }
 
+    // Senha certa, mas o e-mail ainda não foi confirmado. O título é lido pelo app para mostrar "Reenviar e-mail".
+    @ExceptionHandler(EmailNaoVerificadoException.class)
+    public ResponseEntity<StandardError> handleEmailNaoVerificado(EmailNaoVerificadoException e, HttpServletRequest request) {
+        return montar(HttpStatus.FORBIDDEN, "E-mail não confirmado", e.getMessage(), request);
+    }
+
     @ExceptionHandler(AccessDeniedException.class)
     public ResponseEntity<StandardError> handleAcessoNegado(AccessDeniedException e, HttpServletRequest request) {
         return montar(HttpStatus.FORBIDDEN, "Acesso Negado", "Você não tem permissão para esta ação.", request);
