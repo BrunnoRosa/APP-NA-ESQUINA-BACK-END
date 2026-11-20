@@ -1,60 +1,88 @@
 package com.example.app_na_esquina.service;
 
 import jakarta.annotation.PostConstruct;
-import jakarta.mail.internet.MimeMessage;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.mail.javamail.JavaMailSender;
-import org.springframework.mail.javamail.MimeMessageHelper;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import org.springframework.web.util.HtmlUtils;
 
-// Envia os e-mails do sistema pela conta configurada em spring.mail.* (appnaesquina@gmail.com).
+import java.net.URI;
+import java.net.http.HttpClient;
+import java.net.http.HttpRequest;
+import java.net.http.HttpResponse;
+import java.nio.charset.StandardCharsets;
+import java.time.Duration;
+
+// Envia os e-mails do sistema via API HTTPS do Brevo (porta 443, liberada no Railway).
 @Service
 public class EmailService {
 
     private static final Logger log = LoggerFactory.getLogger(EmailService.class);
+    private static final URI BREVO_ENDPOINT = URI.create("https://api.brevo.com/v3/smtp/email");
 
-    @Autowired
-    private JavaMailSender mailSender;
+    private final HttpClient httpClient = HttpClient.newBuilder()
+            .connectTimeout(Duration.ofSeconds(10))
+            .build();
 
-    @Value("${spring.mail.username:}")
+    @Value("${brevo.api-key:}")
+    private String apiKey;
+
+    @Value("${brevo.sender-email:}")
     private String remetente;
+
+    @Value("${brevo.sender-name:Na Esquina}")
+    private String nomeRemetente;
 
     @Value("${app.verificacao.horas:24}")
     private long horasValidade;
 
-    // Mostra na subida se o e-mail foi configurado (nunca imprime a senha)
     @PostConstruct
     void avisarConfiguracao() {
-        if (remetente == null || remetente.isBlank()) {
-            log.warn("E-mail NÃO configurado: MAIL_USERNAME vazio. Os links de confirmação aparecerão só no log.");
+        if (apiKey == null || apiKey.isBlank() || remetente == null || remetente.isBlank()) {
+            log.warn("E-mail NÃO configurado: BREVO_API_KEY ou remetente vazio. Os links de confirmação aparecerão só no log.");
         } else {
-            log.info("E-mail configurado. Remetente: {}", remetente);
+            log.info("E-mail configurado via API Brevo. Remetente: {}", remetente);
         }
     }
 
-    // @Async: o cadastro responde na hora e o envio roda em outra thread.
-    // Se o envio falhar, só registra no log: a conta já foi criada e o usuário pode pedir reenvio.
     @Async
     public void enviarConfirmacaoCadastro(String para, String nome, String link) {
-        // Sem MAIL_USERNAME configurado (ex.: rodando local sem senha de app), mostra o link no console.
-        if (remetente == null || remetente.isBlank()) {
-            log.warn("E-mail NÃO configurado (MAIL_USERNAME vazio). Link de confirmação de {}: {}", para, link);
+        if (apiKey == null || apiKey.isBlank() || remetente == null || remetente.isBlank()) {
+            log.warn("E-mail NÃO configurado (BREVO_API_KEY vazia). Link de confirmação de {}: {}", para, link);
             return;
         }
+
         try {
-            MimeMessage msg = mailSender.createMimeMessage();
-            MimeMessageHelper helper = new MimeMessageHelper(msg, "UTF-8");
-            helper.setFrom(remetente, "Na Esquina");
-            helper.setTo(para);
-            helper.setSubject("Confirme seu e-mail - Na Esquina");
-            helper.setText(montarHtml(nome, link), true);
-            mailSender.send(msg);
-            log.info("E-mail de confirmação enviado para {}", para);
+            String assunto = "Confirme seu e-mail - Na Esquina";
+            String html = montarHtml(nome, link);
+            String nomeDestino = (nome == null || nome.isBlank()) ? para : nome.trim();
+
+            String jsonBody = "{"
+                    + "\"sender\":{\"name\":\"" + escaparJson(nomeRemetente) + "\",\"email\":\"" + escaparJson(remetente) + "\"},"
+                    + "\"to\":[{\"email\":\"" + escaparJson(para) + "\",\"name\":\"" + escaparJson(nomeDestino) + "\"}],"
+                    + "\"subject\":\"" + escaparJson(assunto) + "\","
+                    + "\"htmlContent\":\"" + escaparJson(html) + "\""
+                    + "}";
+
+            HttpRequest request = HttpRequest.newBuilder()
+                    .uri(BREVO_ENDPOINT)
+                    .timeout(Duration.ofSeconds(15))
+                    .header("accept", "application/json")
+                    .header("content-type", "application/json")
+                    .header("api-key", apiKey.trim())
+                    .POST(HttpRequest.BodyPublishers.ofString(jsonBody, StandardCharsets.UTF_8))
+                    .build();
+
+            HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString(StandardCharsets.UTF_8));
+
+            if (response.statusCode() >= 200 && response.statusCode() < 300) {
+                log.info("E-mail de confirmação enviado para {}", para);
+            } else {
+                log.error("Falha ao enviar e-mail de confirmação para {} (HTTP {}): {}",
+                        para, response.statusCode(), response.body());
+            }
         } catch (Exception e) {
             log.error("Falha ao enviar e-mail de confirmação para {}: {}", para, e.getMessage());
         }
@@ -73,5 +101,30 @@ public class EmailService {
                 + "Se o botão não funcionar, copie e cole no navegador:<br>" + link + "</p>"
                 + "<p style=\"font-size:13px;color:#666\">Se você não criou uma conta no Na Esquina, ignore este e-mail.</p>"
                 + "</div>";
+    }
+
+    private String escaparJson(String texto) {
+        if (texto == null) return "";
+        StringBuilder sb = new StringBuilder(texto.length() + 16);
+        for (int i = 0; i < texto.length(); i++) {
+            char c = texto.charAt(i);
+            switch (c) {
+                case '"' -> sb.append("\\\"");
+                case '\\' -> sb.append("\\\\");
+                case '\b' -> sb.append("\\b");
+                case '\f' -> sb.append("\\f");
+                case '\n' -> sb.append("\\n");
+                case '\r' -> sb.append("\\r");
+                case '\t' -> sb.append("\\t");
+                default -> {
+                    if (c < 0x20) {
+                        sb.append(String.format("\\u%04x", (int) c));
+                    } else {
+                        sb.append(c);
+                    }
+                }
+            }
+        }
+        return sb.toString();
     }
 }
