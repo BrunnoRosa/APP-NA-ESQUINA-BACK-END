@@ -5,11 +5,13 @@ import com.example.app_na_esquina.dto.avaliacao.CriarAvaliacaoDTO;
 import com.example.app_na_esquina.dto.avaliacao.ResumoAvaliacoesMercadinhoDTO;
 import com.example.app_na_esquina.service.AvaliacaoService;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpEntity;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/avaliacoes")
@@ -34,5 +36,10 @@ public class AvaliacaoController {
     @GetMapping("/meus-pedidos-avaliados")
     public ResponseEntity<List<Long>> meusPedidosAvaliados(Authentication authentication) {
         return ResponseEntity.ok(avaliacaoService.listarIdsPedidosAvaliados(authentication.getName()));
+    }
+
+    @GetMapping("/medias")
+    public ResponseEntity<Map<Long, Map<String, Object>>> listarMedias() {
+        return ResponseEntity.ok(avaliacaoService.obterMediasPorMercadinho());
     }
 }
