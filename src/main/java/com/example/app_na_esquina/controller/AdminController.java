@@ -39,6 +39,9 @@ public class AdminController {
     private PedidoRepository pedidoRepository;
 
     @Autowired
+    private AvaliacaoRepository avaliacaoRepository;
+
+    @Autowired
     private FavoritoRepository favoritoRepository;
 
     @Autowired
@@ -121,6 +124,7 @@ public class AdminController {
         // 1. Limpa favoritos e pedidos feitos como cliente
         favoritoRepository.deleteAll(favoritoRepository.findByUsuarioIdUsuario(id));
         pedidoRepository.deleteAll(pedidoRepository.findByClienteIdUsuarioOrderByDataCriacaoDesc(id));
+        avaliacaoRepository.deleteByClienteIdUsuario(id);
 
         // 2. Se for comerciante, limpa todos os vínculos da loja antes de remover
         Optional<MercadinhoModel> lojaOpt = mercadinhoRepository.findByUsuarioIdUsuarioNative(id);
@@ -129,6 +133,7 @@ public class AdminController {
             Long idM = loja.getIdMercadinho();
 
             pedidoRepository.deleteAll(pedidoRepository.findByMercadinhoIdMercadinhoOrderByDataCriacaoDesc(idM));
+            avaliacaoRepository.deleteByMercadinhoIdMercadinho(idM);
             favoritoRepository.deleteByMercadinhoIdMercadinho(idM);
             vitrineRepository.deleteAll(vitrineRepository.findByMercadinho_IdMercadinho(idM));
             produtoRepository.deleteAll(produtoRepository.findByMercadinhoIdMercadinho(idM));
