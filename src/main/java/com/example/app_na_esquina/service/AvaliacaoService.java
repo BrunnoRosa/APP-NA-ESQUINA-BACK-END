@@ -16,7 +16,9 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 @Service
 public class AvaliacaoService {
@@ -136,6 +138,24 @@ public class AvaliacaoService {
         if (nota == null || nota < 1 || nota > 5) {
             throw new RegraNegocioException("A nota de " + criterio + " deve ser entre 1 e 5 estrelas.");
         }
+    }
+
+    @Transactional(readOnly = true)
+    public Map<Long, Map<String, Object>> obterMediasPorMercadinho() {
+        List<Object[]> resultados = avaliacaoRepository.calcularMediasPorMercadinho();
+        Map<Long, Map<String, Object>> mapa = new HashMap<>();
+
+        for (Object[] row : resultados) {
+            Long idMercadinho = ((Number) row[0]).longValue();
+            double media = row[1] != null ? arredondar(((Number) row[1]).doubleValue()) : 0.0;
+            long total = row[2] != null ? ((Number) row[2]).longValue() : 0L;
+
+            mapa.put(idMercadinho, Map.of(
+                    "mediaGeral", media,
+                    "totalAvaliacoes", total
+            ));
+        }
+        return mapa;
     }
 
     private double arredondar(double valor) {

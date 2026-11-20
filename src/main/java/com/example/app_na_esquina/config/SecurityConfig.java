@@ -52,7 +52,7 @@ public class SecurityConfig {
                         // Documentação Swagger e rotas de erro do Spring
                         .requestMatchers("/swagger-ui/**", "/swagger-ui.html", "/v3/api-docs", "/v3/api-docs/**").permitAll()
                         .requestMatchers("/error", "/error/**").permitAll()
-                        .requestMatchers(HttpMethod.GET, "/api/avaliacoes/mercadinho/**").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/avaliacoes/mercadinho/**", "/api/avaliacoes/medias").permitAll()
                         .requestMatchers("/api/admin/**").hasAuthority("ADMIN")
 
                         // Qual qualquer outra rota exige autenticação JWT (ex: POST/PUT de produtos por comerciante)
