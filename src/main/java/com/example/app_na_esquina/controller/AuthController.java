@@ -2,6 +2,8 @@ package com.example.app_na_esquina.controller;
 
 import com.example.app_na_esquina.dto.auth.LoginRequestDTO;
 import com.example.app_na_esquina.dto.auth.LoginResponseDTO;
+import com.example.app_na_esquina.dto.auth.RecuperarSenhaRequestDTO;
+import com.example.app_na_esquina.dto.auth.RedefinirSenhaRequestDTO;
 import com.example.app_na_esquina.dto.usuario.UsuarioRequestDTO;
 import com.example.app_na_esquina.exceptions.EmailNaoVerificadoException;
 import com.example.app_na_esquina.exceptions.RecursoNaoEncontradoException;
@@ -11,6 +13,7 @@ import com.example.app_na_esquina.model.enums.PerfilUsuario;
 import com.example.app_na_esquina.repository.MercadinhoRepository;
 import com.example.app_na_esquina.security.CustomUserDetailsService;
 import com.example.app_na_esquina.security.JwtService;
+import com.example.app_na_esquina.service.RecuperacaoSenhaService;
 import com.example.app_na_esquina.service.UsuarioService;
 import com.example.app_na_esquina.service.VerificacaoEmailService;
 import jakarta.validation.Valid;
@@ -48,6 +51,9 @@ public class AuthController {
 
     @Autowired
     private VerificacaoEmailService verificacaoEmailService;
+
+    @Autowired
+    private RecuperacaoSenhaService recuperacaoSenhaService;
 
     @Value("${app.front-url:http://localhost:8081}")
     private String urlDoFront;
@@ -123,6 +129,22 @@ public class AuthController {
         verificacaoEmailService.reenviar(corpo == null ? null : corpo.get("email"));
         return ResponseEntity.ok(Map.of("mensagem",
                 "Se existir uma conta aguardando confirmação para este e-mail, enviamos um novo link."));
+    }
+
+    // Esqueci a senha: envia um código de 6 dígitos por e-mail. Responde sempre 200 igual,
+    // exista ou não a conta (não revela quem tem cadastro).
+    @PostMapping("/recuperar-senha")
+    public ResponseEntity<Map<String, String>> recuperarSenha(@Valid @RequestBody RecuperarSenhaRequestDTO dto) {
+        recuperacaoSenhaService.solicitar(dto.getEmail());
+        return ResponseEntity.ok(Map.of("mensagem",
+                "Se existir uma conta com este e-mail, enviamos um código para redefinir a senha."));
+    }
+
+    // Confere o código recebido e grava a nova senha. Serve para cliente e comerciante.
+    @PostMapping("/redefinir-senha")
+    public ResponseEntity<Map<String, String>> redefinirSenha(@Valid @RequestBody RedefinirSenhaRequestDTO dto) {
+        recuperacaoSenhaService.redefinir(dto.getEmail(), dto.getCodigo(), dto.getNovaSenha(), dto.getConfirmarSenha());
+        return ResponseEntity.ok(Map.of("mensagem", "Senha redefinida com sucesso. Faça login com a nova senha."));
     }
 
     private String paginaResposta(String titulo, String mensagem, boolean sucesso) {

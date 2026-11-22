@@ -49,14 +49,32 @@ public class EmailService {
 
     @Async
     public void enviarConfirmacaoCadastro(String para, String nome, String link) {
-        if (apiKey == null || apiKey.isBlank() || remetente == null || remetente.isBlank()) {
+        if (!configurado()) {
             log.warn("E-mail NÃO configurado (BREVO_API_KEY vazia). Link de confirmação de {}: {}", para, link);
             return;
         }
+        enviarPeloBrevo(para, nome, "Confirme seu e-mail - Na Esquina", montarHtml(nome, link), "confirmação");
+    }
 
+    // Código de 6 dígitos da recuperação de senha (cliente e comerciante usam o mesmo e-mail).
+    @Async
+    public void enviarCodigoRecuperacao(String para, String nome, String codigo, long minutosValidade) {
+        if (!configurado()) {
+            log.warn("E-mail NÃO configurado (BREVO_API_KEY vazia). Código de recuperação de {}: {}", para, codigo);
+            return;
+        }
+        enviarPeloBrevo(para, nome, "Código para redefinir sua senha - Na Esquina",
+                montarHtmlRecuperacao(nome, codigo, minutosValidade), "recuperação de senha");
+    }
+
+    private boolean configurado() {
+        return apiKey != null && !apiKey.isBlank() && remetente != null && !remetente.isBlank();
+    }
+
+    // Envio comum a todos os e-mails: uma chamada HTTPS à API do Brevo.
+    // Se falhar, só registra no log (quem pediu já recebeu a resposta da rota).
+    private void enviarPeloBrevo(String para, String nome, String assunto, String html, String tipo) {
         try {
-            String assunto = "Confirme seu e-mail - Na Esquina";
-            String html = montarHtml(nome, link);
             String nomeDestino = (nome == null || nome.isBlank()) ? para : nome.trim();
 
             String jsonBody = "{"
@@ -78,14 +96,29 @@ public class EmailService {
             HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString(StandardCharsets.UTF_8));
 
             if (response.statusCode() >= 200 && response.statusCode() < 300) {
-                log.info("E-mail de confirmação enviado para {}", para);
+                log.info("E-mail de {} enviado para {}", tipo, para);
             } else {
-                log.error("Falha ao enviar e-mail de confirmação para {} (HTTP {}): {}",
-                        para, response.statusCode(), response.body());
+                log.error("Falha ao enviar e-mail de {} para {} (HTTP {}): {}",
+                        tipo, para, response.statusCode(), response.body());
             }
         } catch (Exception e) {
-            log.error("Falha ao enviar e-mail de confirmação para {}: {}", para, e.getMessage());
+            log.error("Falha ao enviar e-mail de {} para {}: {}", tipo, para, e.getMessage());
         }
+    }
+
+    private String montarHtmlRecuperacao(String nome, String codigo, long minutosValidade) {
+        String primeiroNome = nome == null ? "" : HtmlUtils.htmlEscape(nome.trim().split("\\s+")[0]);
+        return "<div style=\"font-family:Arial,sans-serif;max-width:480px;margin:auto;color:#333\">"
+                + "<h2 style=\"color:#FF3131\">Na Esquina</h2>"
+                + "<p>Olá, " + primeiroNome + "!</p>"
+                + "<p>Use o código abaixo no app para criar uma nova senha:</p>"
+                + "<p style=\"text-align:center;margin:28px 0;font-size:34px;font-weight:bold;"
+                + "letter-spacing:8px;color:#FF3131\">" + codigo + "</p>"
+                + "<p style=\"font-size:13px;color:#666\">O código vale por " + minutosValidade + " minutos "
+                + "e só pode ser usado uma vez.</p>"
+                + "<p style=\"font-size:13px;color:#666\">Se você não pediu a troca de senha, ignore este e-mail: "
+                + "sua senha continua a mesma.</p>"
+                + "</div>";
     }
 
     private String montarHtml(String nome, String link) {
