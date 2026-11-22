@@ -24,6 +24,8 @@ public class LimpezaContasService {
 
         em.createNativeQuery("DELETE FROM tb_tokens_verificacao WHERE id_usuario = :id")
                 .setParameter("id", idUsuario).executeUpdate();
+        em.createNativeQuery("DELETE FROM tb_tokens_recuperacao WHERE id_usuario = :id")
+                .setParameter("id", idUsuario).executeUpdate();
         // Mercadinho cadastrado junto (comerciante) e os favoritos que apontam para ele
         em.createNativeQuery("DELETE FROM tb_favorito WHERE mercadinho_id IN "
                 + "(SELECT id_mercadinho FROM tb_mercadinhos WHERE comerciante_id = :id)")
