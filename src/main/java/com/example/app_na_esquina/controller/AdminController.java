@@ -53,6 +53,9 @@ public class AdminController {
     @Autowired
     private TokenVerificacaoRepository tokenVerificacaoRepository;
 
+    @Autowired
+    private TokenRecuperacaoRepository tokenRecuperacaoRepository;
+
     @GetMapping("/resumo")
     public ResponseEntity<?> obterResumo() {
         List<UsuarioModel> usuarios = usuarioRepository.findAll();
@@ -120,6 +123,7 @@ public class AdminController {
 
         // 0. Remove tokens de confirmação de e-mail (FK para o usuário)
         tokenVerificacaoRepository.deleteByUsuarioIdUsuario(id);
+        tokenRecuperacaoRepository.deleteByUsuarioIdUsuario(id);
 
         // 1. Limpa favoritos e pedidos feitos como cliente
         favoritoRepository.deleteAll(favoritoRepository.findByUsuarioIdUsuario(id));
